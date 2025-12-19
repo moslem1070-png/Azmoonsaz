@@ -236,8 +236,6 @@ export default function ProfilePage() {
                             
                             <hr className="border-white/10 my-8" />
                             
-                             <p className="text-sm text-muted-foreground text-center">برای تغییر رمز عبور یا کد ملی، باید رمز عبور فعلی را وارد کنید.</p>
-
                             <FormField
                                 control={form.control}
                                 name="oldPassword"
@@ -247,7 +245,7 @@ export default function ProfilePage() {
                                         <div className="relative">
                                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                             <FormControl>
-                                                <Input type="password" placeholder="رمز عبور فعلی خود را وارد کنید" {...field} className="pl-10 text-right" />
+                                                <Input type="password" placeholder="برای تغییر، رمز عبور فعلی را وارد کنید" {...field} className="pl-10 text-right" />
                                             </FormControl>
                                         </div>
                                         <FormMessage />
@@ -263,7 +261,7 @@ export default function ProfilePage() {
                                         <div className="relative">
                                             <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                             <FormControl>
-                                                <Input type="password" placeholder="رمز عبور جدید (حداقل ۶ کاراکتر)" {...field} className="pl-10 text-right" />
+                                                <Input type="password" placeholder="رمز عبور جدید" {...field} className="pl-10 text-right" />
                                             </FormControl>
                                         </div>
                                         <FormMessage />
