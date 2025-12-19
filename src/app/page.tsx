@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Briefcase, Key, ArrowRight, UserPlus, Fingerprint } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -33,6 +33,8 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  
+  const isNationalIdValid = useMemo(() => nationalId.length === 10, [nationalId]);
 
   useEffect(() => {
     // If user is already logged in, redirect based on role
@@ -50,6 +52,10 @@ export default function LoginPage() {
   const handleRoleChange = (role: Role) => {
     setSelectedRole(role);
     setAuthMode('login'); // Always default to login when role changes
+    setNationalId('');
+    setPassword('');
+    setConfirmPassword('');
+    setFullName('');
   };
   
 
@@ -57,10 +63,50 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
+    if (selectedRole === 'teacher') {
+        // Hardcoded credentials for teacher/admin login
+        if (nationalId === 'admin' && password === 'admin123') {
+            try {
+                // This is a dummy email for auth purpose, not a real one
+                await signInWithEmailAndPassword(auth, 'teacher-admin@quizmaster.com', 'admin123');
+                localStorage.setItem('userRole', 'teacher');
+                router.push('/dashboard/teacher');
+                toast({ title: 'ورود موفق', description: 'به داشبورد مدیریت خوش آمدید.' });
+            } catch (error: any) {
+                 if (error.code === 'auth/user-not-found') {
+                    try {
+                        const userCredential = await createUserWithEmailAndPassword(auth, 'teacher-admin@quizmaster.com', 'admin123');
+                        await updateProfile(userCredential.user, { displayName: 'مدیر سیستم' });
+                        localStorage.setItem('userRole', 'teacher');
+                        router.push('/dashboard/teacher');
+                        toast({ title: 'ورود موفق', description: 'حساب کاربری مدیر ایجاد و وارد شدید.' });
+                    } catch (creationError: any) {
+                         toast({ variant: 'destructive', title: 'خطای بحرانی', description: 'امکان ایجاد حساب مدیر وجود نداشت.' });
+                    }
+                } else {
+                    toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور مدیر اشتباه است.' });
+                }
+            } finally {
+                setLoading(false);
+            }
+        } else {
+            toast({ variant: 'destructive', title: 'خطای ورود', description: 'اطلاعات ورود مدیر صحیح نیست.' });
+            setLoading(false);
+        }
+        return;
+    }
+
+
     if (!nationalId || !password) {
       toast({ variant: 'destructive', title: 'خطا', description: 'کد ملی و رمز عبور الزامی است.' });
       setLoading(false);
       return;
+    }
+    
+    if (!isNationalIdValid) {
+        toast({ variant: 'destructive', title: 'خطا', description: 'کد ملی باید ۱۰ رقم باشد.' });
+        setLoading(false);
+        return;
     }
 
     const email = createEmailFromNationalId(nationalId);
@@ -68,12 +114,6 @@ export default function LoginPage() {
     try {
       let userCredential;
       if (authMode === 'signup') {
-        if (selectedRole === 'teacher') {
-            toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت نام برای مدیر وجود ندارد. لطفا وارد شوید.' });
-            setLoading(false);
-            return;
-        }
-
         if (password !== confirmPassword) {
           toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور و تکرار آن یکسان نیستند.' });
           setLoading(false);
@@ -199,12 +239,19 @@ export default function LoginPage() {
                 <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input 
                   type="text" 
-                  placeholder="کد ملی" 
-                  className="pl-10 text-right" 
+                  placeholder={selectedRole === 'teacher' ? "نام کاربری مدیر" : "کد ملی"}
+                  className={cn(
+                    "pl-10 text-right",
+                    selectedRole === 'student' && nationalId.length > 0 && !isNationalIdValid && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
+                  )}
                   value={nationalId}
                   onChange={(e) => setNationalId(e.target.value)}
                   required
+                  maxLength={selectedRole === 'student' ? 10 : undefined}
                 />
+                {selectedRole === 'student' && nationalId.length > 0 && !isNationalIdValid && (
+                    <p className="text-xs text-muted-foreground mt-1.5 text-right">کد ملی باید ۱۰ رقم باشد.</p>
+                )}
               </div>
               <div className="relative">
                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -238,7 +285,7 @@ export default function LoginPage() {
           </motion.div>
         </AnimatePresence>
 
-        {selectedRole !== 'teacher' && (
+        {selectedRole === 'student' && (
           <div className="flex items-center justify-center space-x-reverse space-x-2">
               <Button
                 variant="link"
@@ -263,6 +310,11 @@ export default function LoginPage() {
               </Button>
           </div>
         )}
+        
+        {selectedRole === 'teacher' && authMode === 'login' && (
+             <p className="text-xs text-muted-foreground text-center pt-4">برای ورود به عنوان مدیر، از نام کاربری `admin` و رمز عبور `admin123` استفاده کنید.</p>
+        )}
+
       </GlassCard>
     </div>
   );
