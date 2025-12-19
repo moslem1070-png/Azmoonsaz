@@ -26,7 +26,7 @@ export function Toaster() {
             </div>
             {action}
             <ToastClose />
-            <div className="absolute bottom-0 left-0 h-1 w-full bg-white/20">
+            <div className="absolute bottom-0 left-0 h-1 w-full bg-white/20 overflow-hidden">
               <div className="h-1 bg-primary animate-toast-progress"></div>
             </div>
           </Toast>
