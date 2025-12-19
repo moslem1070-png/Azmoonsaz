@@ -78,11 +78,7 @@ export default function LoginPage() {
 
   const handleRoleChange = (role: Role) => {
     setSelectedRole(role);
-    if (role === 'teacher') {
-      setAuthMode('login'); 
-    } else {
-      setAuthMode('login');
-    }
+    setAuthMode('login');
     setNationalId('');
     setPassword('');
     setConfirmPassword('');
@@ -257,7 +253,7 @@ export default function LoginPage() {
             transition={{ duration: 0.3 }}
           >
             <form className="space-y-6" onSubmit={handleAuthSubmission}>
-              {selectedRole === 'teacher' && (
+              {selectedRole === 'teacher' && authMode === 'login' && (
                 <RadioGroup
                   defaultValue="manager"
                   value={teacherSubRole}
