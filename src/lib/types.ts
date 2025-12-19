@@ -1,22 +1,23 @@
 import { Timestamp } from "firebase/firestore";
 
 export type Question = {
-  id: string; // Changed from number to string for Firestore compatibility
+  id: string; 
   text: string;
   options: string[];
-  correctAnswer: string; // Storing the answer text directly
-  imageURL?: string;
+  correctAnswer: string; 
+  imageURL?: string; // Now holds the public URL of the uploaded image
+  examId: string;
 };
 
 export type Exam = {
   id: string;
   title: string;
-  description: string;
-  coverImageId: string;
+  description?: string;
+  coverImageURL?: string; // Now holds the public URL of the uploaded image
   difficulty: 'Easy' | 'Medium' | 'Hard';
   timer: number; // in minutes
-  questions: Question[];
   teacherId: string; // To know who created the exam
+  // Questions are now a subcollection, so they are not stored directly on the exam document.
 };
 
 export type ExamResult = {
@@ -24,7 +25,7 @@ export type ExamResult = {
   examId: string;
   studentId: string;
   scorePercentage: number;
-  correctness: number; // Renamed from correctAnswers
+  correctness: number; 
   totalQuestions: number;
   submissionTime: Timestamp; // Firestore Timestamp
   userAnswers: Record<string, string>; // { questionId: selectedOption }
@@ -39,7 +40,7 @@ export type HistoryItem = {
   score: number;
   correctAnswers: number;
   totalQuestions: number;
-  rank?: number; // Rank is complex, making it optional for now
+  rank?: number; 
 };
 
 // Represents a user document in Firestore

@@ -9,11 +9,10 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import GlassCard from '@/components/glass-card';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
 import { saveExamResult } from '@/lib/results-storage';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import type { Exam, Question } from '@/lib/types';
 
 export default function ExamPage() {
@@ -29,22 +28,26 @@ export default function ExamPage() {
     [firestore, examId]
   );
   const { data: exam, isLoading: examLoading } = useDoc<Exam>(examRef);
+  
+  const questionsRef = useMemoFirebase(
+    () => (firestore && examId ? collection(firestore, 'exams', examId, 'questions') : null),
+    [firestore, examId]
+  );
+  const { data: questions, isLoading: questionsLoading } = useCollection<Question>(questionsRef);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [isExamFinished, setIsExamFinished] = useState(false);
-  const [questions, setQuestions] = useState<Question[]>([]);
 
   useEffect(() => {
     if (exam) {
       setTimeLeft(exam.timer * 60);
-      setQuestions(exam.questions || []);
     }
   }, [exam]);
 
   useEffect(() => {
-    if (isExamFinished || timeLeft <= 0) return;
+    if (isExamFinished || timeLeft <= 0 || !exam) return;
 
     const timer = setInterval(() => {
       setTimeLeft((prevTime) => {
@@ -59,10 +62,10 @@ export default function ExamPage() {
 
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeLeft, isExamFinished]);
+  }, [timeLeft, isExamFinished, exam]);
 
   const progressValue = useMemo(() => {
-    if (questions.length === 0) return 0;
+    if (!questions || questions.length === 0) return 0;
     return ((currentQuestionIndex + 1) / questions.length) * 100;
   }, [currentQuestionIndex, questions]);
 
@@ -83,13 +86,11 @@ export default function ExamPage() {
   };
 
   const finishExam = async () => {
-    if (!exam || !user || isExamFinished) return;
-    setIsExamFinished(true); // Prevent multiple submissions
+    if (!exam || !user || !questions || isExamFinished) return;
+    setIsExamFinished(true); 
 
     try {
-      // Pass the full exam object with its questions
-      const fullExamData = { ...exam, questions: questions };
-      await saveExamResult(user.uid, fullExamData, selectedAnswers);
+      await saveExamResult(user.uid, exam, questions, selectedAnswers);
       toast({
         title: 'آزمون به پایان رسید',
         description: 'در حال محاسبه نتایج...',
@@ -102,21 +103,29 @@ export default function ExamPage() {
         description:
           'مشکلی در ذخیره نتایج آزمون شما پیش آمد. لطفا دوباره تلاش کنید.',
       });
-      setIsExamFinished(false); // Allow retry
+      setIsExamFinished(false);
     }
   };
 
-  if (examLoading || !exam) {
+  const isLoading = examLoading || questionsLoading;
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <h1 className="text-2xl">
-          {examLoading ? 'در حال بارگذاری آزمون...' : 'آزمون یافت نشد.'}
-        </h1>
+        <h1 className="text-2xl">در حال بارگذاری آزمون...</h1>
       </div>
     );
   }
   
-  if (questions.length === 0) {
+  if (!exam) {
+      return (
+          <div className="flex items-center justify-center min-h-screen">
+              <h1 className="text-2xl">آزمون یافت نشد.</h1>
+          </div>
+      )
+  }
+  
+  if (!questions || questions.length === 0) {
       return (
           <div className="flex items-center justify-center min-h-screen">
               <h1 className="text-2xl">این آزمون هنوز سوالی ندارد.</h1>
@@ -125,9 +134,6 @@ export default function ExamPage() {
   }
 
   const currentQuestion = questions[currentQuestionIndex];
-  const placeholderImage = PlaceHolderImages.find(
-    (img) => img.id === currentQuestion.imageURL
-  )?.imageUrl;
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -140,7 +146,6 @@ export default function ExamPage() {
   return (
     <div className="flex items-center justify-center min-h-screen p-4 bg-gradient-to-br from-[#302851] to-[#1A162E]">
       <GlassCard className="w-full max-w-4xl h-full max-h-[95vh] sm:max-h-[90vh] flex flex-col p-4 sm:p-8">
-        {/* Header */}
         <div className="mb-6">
           <div className="flex flex-col-reverse sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <h1 className="text-xl sm:text-2xl font-bold self-end">
@@ -154,7 +159,6 @@ export default function ExamPage() {
           <Progress value={progressValue} className="w-full h-3 [&>*]:bg-primary" />
         </div>
 
-        {/* Body */}
         <div className="flex-1 flex flex-col overflow-y-auto pr-2 sm:pr-4">
           <h2 className="text-lg sm:text-xl font-semibold mb-4">
             سوال {currentQuestionIndex + 1} از {questions.length}
@@ -163,10 +167,10 @@ export default function ExamPage() {
             {currentQuestion.text}
           </p>
 
-          {placeholderImage && (
+          {currentQuestion.imageURL && (
             <div className="relative w-full h-48 sm:h-64 mb-6 rounded-2xl overflow-hidden">
               <Image
-                src={placeholderImage}
+                src={currentQuestion.imageURL}
                 alt={`Question ${currentQuestion.id}`}
                 fill
                 className="object-cover"
@@ -207,7 +211,6 @@ export default function ExamPage() {
           </RadioGroup>
         </div>
 
-        {/* Footer */}
         <div className="mt-8 pt-6 border-t border-white/10 flex justify-between items-center">
           <Button
             variant="outline"

@@ -12,13 +12,12 @@ import {
   Cell,
 } from 'recharts';
 import { Home, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
-import { doc } from 'firebase/firestore';
+import { doc, collection, getDocs } from 'firebase/firestore';
 
 import GlassCard from '@/components/glass-card';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import type { Exam, ExamResult } from '@/lib/types';
-import { Progress } from '@/components/ui/progress';
 
 export default function ResultsPage() {
   const params = useParams();
@@ -28,14 +27,12 @@ export default function ResultsPage() {
 
   const examId = Array.isArray(params.id) ? params.id[0] : params.id;
 
-  // Fetch the exam details
   const examRef = useMemoFirebase(
     () => (firestore && examId ? doc(firestore, 'exams', examId) : null),
     [firestore, examId]
   );
   const { data: exam, isLoading: examLoading } = useDoc<Exam>(examRef);
 
-  // Fetch the user's specific result for this exam
   const resultRef = useMemoFirebase(
     () =>
       firestore && user && examId
@@ -48,9 +45,9 @@ export default function ResultsPage() {
   const isLoading = userLoading || examLoading || resultLoading;
 
   const chartData = useMemo(() => {
-    if (!result || !exam) return [];
+    if (!result) return [];
     
-    const totalQuestions = exam.questions?.length || 0;
+    const totalQuestions = result.totalQuestions || 0;
     const answeredCount = Object.keys(result.userAnswers).length;
     const correctCount = result.correctness;
     const incorrectCount = answeredCount - correctCount;
@@ -62,7 +59,7 @@ export default function ResultsPage() {
       { name: 'بدون پاسخ', value: unansweredCount, color: 'hsl(var(--muted))' },
     ].sort((a, b) => b.value - a.value);
 
-  }, [result, exam]);
+  }, [result]);
 
   if (isLoading) {
     return (
@@ -85,7 +82,7 @@ export default function ResultsPage() {
 
   const answeredCount = Object.keys(result.userAnswers).length;
   const incorrectCount = answeredCount - result.correctness;
-  const totalQuestions = exam.questions?.length || 0;
+  const totalQuestions = result.totalQuestions;
 
   return (
     <div className="flex items-center justify-center min-h-screen p-4 bg-gradient-to-br from-[#302851] to-[#1A162E]">

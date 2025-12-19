@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -25,14 +24,12 @@ export default function DashboardPage() {
 
   const firestore = useFirestore();
 
-  // 1. Fetch all available exams only when user is logged in
   const examsCollection = useMemoFirebase(
     () => (firestore && user ? collection(firestore, 'exams') : null),
     [firestore, user]
   );
   const { data: exams, isLoading: examsLoading } = useCollection<Exam>(examsCollection);
 
-  // 2. Fetch the user's results to know which exams are completed
   const examResultsCollection = useMemoFirebase(
     () => (firestore && user ? collection(firestore, 'users', user.uid, 'examResults') : null),
     [firestore, user]
@@ -40,7 +37,6 @@ export default function DashboardPage() {
   const { data: examResults, isLoading: resultsLoading } = useCollection<ExamResult>(examResultsCollection);
 
   useEffect(() => {
-    // This will only run on the client side
     const role = localStorage.getItem('userRole') as Role;
     setUserRole(role);
 
@@ -56,16 +52,6 @@ export default function DashboardPage() {
       setCompletedExamIds(new Set(examResults.map((result) => result.examId)));
     }
   }, [examResults]);
-
-  const getPlaceholderImage = (id: string) => {
-    const image = PlaceHolderImages.find((img) => img.id === id);
-    return image ? image.imageUrl : 'https://picsum.photos/seed/1/600/400';
-  };
-
-  const getImageHint = (id: string) => {
-    const image = PlaceHolderImages.find((img) => img.id === id);
-    return image ? image.imageHint : 'quiz education';
-  }
 
   const handleStartExam = (examId: string, isCompleted: boolean) => {
     if (isCompleted) {
@@ -101,11 +87,11 @@ export default function DashboardPage() {
                   <GlassCard key={exam.id} className="flex flex-col overflow-hidden transition-transform duration-300 hover:-translate-y-2">
                     <div className="relative h-48 w-full">
                       <Image
-                        src={getPlaceholderImage(exam.coverImageId)}
+                        src={exam.coverImageURL || 'https://picsum.photos/seed/1/600/400'}
                         alt={exam.title}
                         fill
                         className="object-cover"
-                        data-ai-hint={getImageHint(exam.coverImageId)}
+                        data-ai-hint="quiz education"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                       <Badge
@@ -122,10 +108,7 @@ export default function DashboardPage() {
                           <Clock className="w-4 h-4 text-accent" />
                           <span>{exam.timer} دقیقه</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <FileQuestion className="w-4 h-4 text-accent" />
-                          <span>{exam.questions?.length || 0} سوال</span>
-                        </div>
+                        {/* Question count will be fetched on the start page */}
                       </div>
                       <Button
                         onClick={() => handleStartExam(exam.id, isCompleted)}

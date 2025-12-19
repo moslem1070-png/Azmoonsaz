@@ -53,9 +53,10 @@
           "type": "string",
           "description": "The title of the exam."
         },
-        "coverImageId": {
+        "coverImageURL": {
           "type": "string",
-          "description": "ID of the cover image for the exam."
+          "description": "URL of the cover image for the exam.",
+          "format": "uri"
         },
         "difficulty": {
           "type": "string",
@@ -70,7 +71,6 @@
         "id",
         "teacherId",
         "title",
-        "coverImageId",
         "difficulty",
         "timer"
       ]

@@ -9,7 +9,7 @@ import {
   Calendar,
   BookOpen,
 } from 'lucide-react';
-import { collection, doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 
 import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
@@ -46,9 +46,7 @@ export default function HistoryPage() {
       };
 
       setIsLoading(true);
-      const historyItems: HistoryItem[] = [];
-
-      // Using Promise.all for parallel fetching
+      
       const promises = examResults.map(async (result) => {
         const examDocRef = doc(firestore, 'exams', result.examId);
         const examDocSnap = await getDoc(examDocRef);
@@ -59,11 +57,10 @@ export default function HistoryPage() {
             id: result.id,
             examId: result.examId,
             title: examData.title,
-            // Convert Firestore Timestamp to JS Date, then format it
             date: result.submissionTime?.toDate ? result.submissionTime.toDate().toLocaleDateString('fa-IR') : 'تاریخ نامشخص',
             score: result.scorePercentage,
             correctAnswers: result.correctness,
-            totalQuestions: examData.questions?.length || result.totalQuestions || 0, // Fallback
+            totalQuestions: result.totalQuestions || 0,
           };
         }
         return null;

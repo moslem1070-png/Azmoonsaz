@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 
 import GlassCard from '@/components/glass-card';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
@@ -29,6 +28,7 @@ export default function ExamStartPage() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [participants, setParticipants] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [questionCount, setQuestionCount] = useState(0);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -50,40 +50,32 @@ export default function ExamStartPage() {
       }
       
       // Count total participants for this exam
-      const allUsersResultsQuery = query(
-        collection(firestore, 'users'),
-      );
-      
+      const allUsersResultsQuery = query(collection(firestore, 'users'));
       const usersSnapshot = await getDocs(allUsersResultsQuery);
-      let participantCount = 0;
       
       const participantPromises = usersSnapshot.docs.map(async (userDoc) => {
         const userExamResultRef = doc(firestore, 'users', userDoc.id, 'examResults', examId);
         const userExamResultSnap = await getDoc(userExamResultRef);
-        if (userExamResultSnap.exists()) {
-          return 1;
-        }
-        return 0;
+        return userExamResultSnap.exists() ? 1 : 0;
       });
       
       const results = await Promise.all(participantPromises);
-      participantCount = results.reduce((sum, current) => sum + current, 0);
-
+      const participantCount = results.reduce((sum, current) => sum + current, 0);
       setParticipants(participantCount);
+      
+      // Get question count from subcollection
+      const questionsCollectionRef = collection(firestore, 'exams', examId, 'questions');
+      const questionsSnapshot = await getDocs(questionsCollectionRef);
+      setQuestionCount(questionsSnapshot.size);
+
       setLoading(false);
     };
 
-    checkCompletionAndParticipants();
-  }, [examId, user, firestore]);
+    if (exam) {
+        checkCompletionAndParticipants();
+    }
+  }, [examId, user, firestore, exam]);
 
-  const getPlaceholderImage = (id: string) => {
-    return PlaceHolderImages.find((img) => img.id === id)?.imageUrl ?? 'https://picsum.photos/seed/1/600/400';
-  };
-  
-  const getImageHint = (id: string) => {
-    const image = PlaceHolderImages.find((img) => img.id === id);
-    return image ? image.imageHint : 'quiz education';
-  }
 
   const handleStart = () => {
     if (isCompleted) {
@@ -116,11 +108,11 @@ export default function ExamStartPage() {
       <GlassCard className="w-full max-w-2xl overflow-hidden">
         <div className="relative h-48 sm:h-60 w-full">
           <Image
-            src={getPlaceholderImage(exam.coverImageId)}
+            src={exam.coverImageURL || 'https://picsum.photos/seed/1/600/400'}
             alt={exam.title}
             fill
             className="object-cover"
-            data-ai-hint={getImageHint(exam.coverImageId)}
+            data-ai-hint="quiz education"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
           <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6">
@@ -147,7 +139,7 @@ export default function ExamStartPage() {
             </GlassCard>
             <GlassCard className="p-4">
               <FileQuestion className="w-8 h-8 mx-auto mb-2 text-accent" />
-              <p className="font-bold text-lg">{exam.questions?.length || 0} سوال</p>
+              <p className="font-bold text-lg">{questionCount} سوال</p>
               <p className="text-sm text-muted-foreground">تعداد سوالات</p>
             </GlassCard>
             <GlassCard className="p-4">
