@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { BookOpen, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { ReactNode } from "react";
 
-const Header = () => {
+const Header = ({ children }: { children?: ReactNode }) => {
   return (
     <header className="sticky top-0 z-50">
         <div className="container mx-auto px-4">
@@ -13,12 +14,15 @@ const Header = () => {
                     </div>
                     <h1 className="text-xl font-bold text-white">Persian QuizMaster</h1>
                 </Link>
-                <Avatar>
-                    <AvatarImage src="https://picsum.photos/seed/avatar/100/100" />
-                    <AvatarFallback>
-                        <User />
-                    </AvatarFallback>
-                </Avatar>
+                <div className="flex items-center gap-4">
+                    {children}
+                    <Avatar>
+                        <AvatarImage src="https://picsum.photos/seed/avatar/100/100" />
+                        <AvatarFallback>
+                            <User />
+                        </AvatarFallback>
+                    </Avatar>
+                </div>
             </div>
         </div>
     </header>
