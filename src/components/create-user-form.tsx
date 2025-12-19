@@ -18,13 +18,10 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 const formSchema = z.object({
   fullName: z.string().min(3, { message: 'نام کامل باید حداقل ۳ حرف باشد.' }),
-  nationalId: z.string().min(1, { message: 'کد ملی الزامی است.' }),
-  password: z.string().min(8, { message: 'رمز عبور باید حداقل ۸ کاراکتر باشد.' }),
-}).refine(data => {
-    return /^\d{10}$/.test(data.nationalId);
-}, {
+  nationalId: z.string().refine(data => /^\d{10}$/.test(data), {
     message: 'کد ملی باید ۱۰ رقم و فقط شامل عدد باشد.',
-    path: ['nationalId'],
+  }),
+  password: z.string().min(8, { message: 'رمز عبور باید حداقل ۸ کاراکتر باشد.' }),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -41,6 +38,7 @@ export default function CreateUserForm() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
     defaultValues: {
       fullName: '',
       nationalId: '',
@@ -165,7 +163,7 @@ export default function CreateUserForm() {
         </div>
         
         <div className="flex justify-end pt-4">
-          <Button type="submit" className="w-full sm:w-auto bg-primary/80 hover:bg-primary" disabled={loading}>
+          <Button type="submit" className="w-full sm:w-auto bg-primary/80 hover:bg-primary" disabled={loading || !form.formState.isValid}>
             {loading ? 'در حال ایجاد...' : 'ایجاد دانش‌آموز'}
           </Button>
         </div>

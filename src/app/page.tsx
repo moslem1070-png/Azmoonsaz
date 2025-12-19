@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, Briefcase, Key, ArrowRight, UserPlus, Fingerprint } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { doc, setDoc } from 'firebase/firestore';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -15,6 +18,7 @@ import { useAuth, useUser, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 type Role = 'student' | 'teacher';
 type AuthMode = 'login' | 'signup';
@@ -24,15 +28,54 @@ const createEmail = (username: string, role: Role) => {
     return `${role}-${username}@quizmaster.com`;
 }
 
+const formSchema = z.object({
+  fullName: z.string(),
+  nationalId: z.string().min(1, { message: 'کد ملی یا نام کاربری الزامی است.'}),
+  password: z.string().min(1, { message: 'رمز عبور الزامی است.'}),
+  confirmPassword: z.string(),
+});
+
+const getValidationSchema = (authMode: AuthMode, selectedRole: Role) => {
+    return formSchema.superRefine((data, ctx) => {
+        if (selectedRole === 'student') {
+            if (!/^\d{10}$/.test(data.nationalId)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "کد ملی باید ۱۰ رقم و فقط شامل عدد باشد.",
+                    path: ['nationalId'],
+                });
+            }
+        }
+        if (authMode === 'signup') {
+            if (!data.fullName) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "نام و نام خانوادگی الزامی است.",
+                    path: ['fullName'],
+                });
+            }
+            if (data.password.length < 8) {
+                 ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "رمز عبور باید حداقل ۸ کاراکتر باشد.",
+                    path: ['password'],
+                });
+            }
+            if (data.password !== data.confirmPassword) {
+                 ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "رمز عبور و تکرار آن یکسان نیستند.",
+                    path: ['confirmPassword'],
+                });
+            }
+        }
+    });
+}
+
 
 export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<Role>('student');
   const [authMode, setAuthMode] = useState<AuthMode>('login');
-
-  const [nationalId, setNationalId] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
 
   const auth = useAuth();
@@ -40,23 +83,23 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
-  
-  const isPasswordLengthValid = useMemo(() => password.length >= 8, [password]);
 
+  const currentSchema = useMemo(() => getValidationSchema(authMode, selectedRole), [authMode, selectedRole]);
 
-  const nationalIdError = useMemo(() => {
-    if (selectedRole === 'student' && nationalId && !/^\d{10}$/.test(nationalId)) {
-      return "کد ملی باید ۱۰ رقم و فقط شامل عدد باشد.";
-    }
-    return null;
-  }, [selectedRole, nationalId]);
+  const form = useForm<z.infer<typeof currentSchema>>({
+    resolver: zodResolver(currentSchema),
+    mode: 'onChange',
+    defaultValues: {
+      fullName: '',
+      nationalId: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
-  const passwordError = useMemo(() => {
-    if (authMode === 'signup' && password && password.length < 8) {
-        return "رمز عبور باید حداقل ۸ کاراکتر باشد.";
-    }
-    return null;
-  }, [authMode, password]);
+  useEffect(() => {
+    form.reset();
+  }, [selectedRole, authMode, form]);
 
 
   useEffect(() => {
@@ -74,27 +117,11 @@ export default function LoginPage() {
   const handleRoleChange = (role: Role) => {
     setSelectedRole(role);
     setAuthMode('login'); // Always default to login when role changes
-    setNationalId('');
-    setPassword('');
-    setConfirmPassword('');
-    setFullName('');
   };
   
-  const handleAuthSubmission = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAuthSubmission: SubmitHandler<z.infer<typeof currentSchema>> = async (data) => {
     setLoading(true);
-
-    if (!nationalId || !password) {
-      toast({ variant: 'destructive', title: 'خطا', description: 'نام کاربری/کد ملی و رمز عبور الزامی است.' });
-      setLoading(false);
-      return;
-    }
-    
-    if (selectedRole === 'student' && nationalIdError) {
-        toast({ variant: 'destructive', title: 'خطا', description: nationalIdError });
-        setLoading(false);
-        return;
-    }
+    const { nationalId, password, fullName } = data;
 
     if (authMode === 'signup') {
       // --- SIGNUP LOGIC (Only for students from this page) ---
@@ -103,22 +130,6 @@ export default function LoginPage() {
             setLoading(false);
             return;
        }
-
-      if (passwordError) {
-          toast({ variant: 'destructive', title: 'خطا', description: passwordError });
-          setLoading(false);
-          return;
-      }
-      if (password !== confirmPassword) {
-        toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور و تکرار آن یکسان نیستند.' });
-        setLoading(false);
-        return;
-      }
-      if (!fullName) {
-          toast({ variant: 'destructive', title: 'خطا', description: 'نام و نام خانوادگی الزامی است.' });
-          setLoading(false);
-          return;
-      }
 
       const email = createEmail(nationalId, 'student');
       
@@ -252,82 +263,107 @@ export default function LoginPage() {
             exit="exit"
             transition={{ duration: 0.3 }}
           >
-            <form className="space-y-6" onSubmit={handleAuthSubmission}>
-              
-              {authMode === 'signup' && selectedRole === 'student' && (
-                 <div className="relative">
-                  <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input 
-                    type="text" 
-                    placeholder="نام و نام خانوادگی" 
-                    className="pl-10 text-right"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-              )}
-              
-              <div className='relative'>
-                <div className="relative flex items-center">
-                  <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
-                  <Input 
-                    type="text" 
-                    placeholder={selectedRole === 'teacher' ? "نام کاربری" : "کد ملی"}
-                    className={cn(
-                      "pl-10 text-right",
-                      nationalIdError && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
+            <Form {...form}>
+              <form className="space-y-6" onSubmit={form.handleSubmit(handleAuthSubmission)}>
+                
+                {authMode === 'signup' && selectedRole === 'student' && (
+                  <FormField
+                    control={form.control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="sr-only">نام و نام خانوادگی</FormLabel>
+                        <div className="relative">
+                          <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                          <FormControl>
+                            <Input 
+                              type="text" 
+                              placeholder="نام و نام خانوادگی" 
+                              className="pl-10 text-right"
+                              {...field}
+                            />
+                          </FormControl>
+                        </div>
+                        <FormMessage className="text-right" />
+                      </FormItem>
                     )}
-                    value={nationalId}
-                    onChange={(e) => setNationalId(e.target.value)}
-                    required
-                    maxLength={selectedRole === 'student' ? 10 : undefined}
                   />
-                </div>
-                {nationalIdError && (
-                    <p className="text-xs text-red-400 mt-1.5 text-right">{nationalIdError}</p>
                 )}
-              </div>
+                
+                <FormField
+                  control={form.control}
+                  name="nationalId"
+                  render={({ field }) => (
+                    <FormItem>
+                       <FormLabel className="sr-only">{selectedRole === 'teacher' ? "نام کاربری" : "کد ملی"}</FormLabel>
+                        <div className="relative">
+                            <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                            <FormControl>
+                                <Input 
+                                type="text" 
+                                placeholder={selectedRole === 'teacher' ? "نام کاربری" : "کد ملی"}
+                                className="pl-10 text-right"
+                                maxLength={selectedRole === 'student' ? 10 : undefined}
+                                {...field}
+                                />
+                            </FormControl>
+                        </div>
+                        <FormMessage className="text-right" />
+                    </FormItem>
+                  )}
+                />
 
-              <div>
-                <div className="relative flex items-center">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
-                    <Input 
-                    type="password" 
-                    placeholder="رمز عبور" 
-                    className={cn(
-                        "pl-10 text-right",
-                        passwordError && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                       <FormLabel className="sr-only">رمز عبور</FormLabel>
+                        <div className="relative">
+                            <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                            <FormControl>
+                                <Input 
+                                type="password" 
+                                placeholder="رمز عبور" 
+                                className="pl-10 text-right"
+                                {...field}
+                                />
+                            </FormControl>
+                        </div>
+                        <FormMessage className="text-right" />
+                    </FormItem>
+                  )}
+                />
+
+                {authMode === 'signup' && selectedRole === 'student' && (
+                  <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                       <FormItem>
+                         <FormLabel className="sr-only">تکرار رمز عبور</FormLabel>
+                          <div className="relative">
+                            <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                            <FormControl>
+                                <Input 
+                                type="password" 
+                                placeholder="تکرار رمز عبور" 
+                                className="pl-10 text-right"
+                                {...field}
+                                />
+                            </FormControl>
+                          </div>
+                          <FormMessage className="text-right" />
+                       </FormItem>
                     )}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    />
-                </div>
-                {passwordError && (
-                    <p className="text-xs text-red-400 mt-1.5 text-right">{passwordError}</p>
-                )}
-              </div>
-
-              {authMode === 'signup' && selectedRole === 'student' && (
-                <div className="relative">
-                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input 
-                    type="password" 
-                    placeholder="تکرار رمز عبور" 
-                     className="pl-10 text-right"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    disabled={!isPasswordLengthValid}
                   />
-                </div>
-              )}
-              <Button type="submit" className="w-full bg-primary/80 hover:bg-primary" disabled={loading || (selectedRole === 'student' && !!nationalIdError) || (authMode === 'signup' && !!passwordError)}>
-                {loading ? 'در حال پردازش...' : (authMode === 'login' ? 'ورود' : 'ایجاد حساب')}
-                {!loading && <ArrowRight className="mr-2 h-4 w-4" />}
-              </Button>
-            </form>
+                )}
+                <Button type="submit" className="w-full bg-primary/80 hover:bg-primary" disabled={loading || !form.formState.isValid}>
+                  {loading ? 'در حال پردازش...' : (authMode === 'login' ? 'ورود' : 'ایجاد حساب')}
+                  {!loading && <ArrowRight className="mr-2 h-4 w-4" />}
+                </Button>
+              </form>
+            </Form>
           </motion.div>
         </AnimatePresence>
 
