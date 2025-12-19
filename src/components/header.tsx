@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { BookOpen, User, LogOut, Edit, GraduationCap, Home, History, Briefcase, FilePlus, Settings, UserPlus } from "lucide-react";
+import { BookOpen, User, LogOut, Edit, GraduationCap, Home, History, Briefcase, FilePlus, Settings, UserPlus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { useState, useEffect, type ReactNode } from "react";
@@ -104,10 +104,16 @@ const Header = ({ children }: { children?: ReactNode }) => {
                                 <span>مدیریت آزمون‌ها</span>
                             </DropdownMenuItem>
                            {userRole === 'manager' && (
+                            <>
                                 <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/create-user')}>
                                     <UserPlus className="ml-2 h-4 w-4" />
                                     <span>ایجاد کاربر</span>
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {/* router.push('/dashboard/teacher/manage-users') */}}>
+                                    <Users className="ml-2 h-4 w-4" />
+                                    <span>مدیریت کاربرها</span>
+                                </DropdownMenuItem>
+                            </>
                            )}
                         </>
                       )}
