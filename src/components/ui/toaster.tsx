@@ -14,7 +14,7 @@ export function Toaster() {
   const { toasts } = useToast()
 
   return (
-    <ToastProvider>
+    <ToastProvider duration={5000}>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
           <Toast key={id} {...props}>
@@ -26,6 +26,9 @@ export function Toaster() {
             </div>
             {action}
             <ToastClose />
+            <div className="absolute bottom-0 left-0 h-1 w-full bg-white/20">
+              <div className="h-1 bg-primary animate-toast-progress"></div>
+            </div>
           </Toast>
         )
       })}
