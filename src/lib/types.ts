@@ -5,7 +5,7 @@ export type Question = {
   text: string;
   options: string[];
   correctAnswer: string; 
-  imageURL?: string; // Now holds the public URL of the uploaded image
+  imageURL?: string;
   examId: string;
 };
 
@@ -13,11 +13,10 @@ export type Exam = {
   id: string;
   title: string;
   description?: string;
-  coverImageURL?: string; // Now holds the public URL of the uploaded image
+  coverImageURL?: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   timer: number; // in minutes
   teacherId: string; // To know who created the exam
-  // Questions are now a subcollection, so they are not stored directly on the exam document.
 };
 
 export type ExamResult = {
