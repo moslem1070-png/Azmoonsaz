@@ -109,7 +109,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
                                     <UserPlus className="ml-2 h-4 w-4" />
                                     <span>ایجاد کاربر</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {/* router.push('/dashboard/teacher/manage-users') */}}>
+                                <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/manage-users')}>
                                     <Users className="ml-2 h-4 w-4" />
                                     <span>مدیریت کاربرها</span>
                                 </DropdownMenuItem>

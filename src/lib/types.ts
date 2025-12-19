@@ -28,4 +28,11 @@ export type HistoryItem = {
   rank: number;
 };
 
-export type UserRole = 'student' | 'teacher' | 'admin';
+export type UserRole = 'student' | 'teacher' | 'admin' | 'manager';
+
+export type MockUser = {
+  id: string;
+  fullName: string;
+  username: string;
+  role: 'student' | 'teacher' | 'manager';
+};
