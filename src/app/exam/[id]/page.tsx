@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import GlassCard from '@/components/glass-card';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
+import { saveExamResult } from '@/lib/results-storage';
 
 export default function ExamPage() {
   const params = useParams();
@@ -60,11 +61,13 @@ export default function ExamPage() {
   };
 
   const finishExam = () => {
+    if (!exam) return;
+    saveExamResult(exam.id, selectedAnswers);
     toast({
         title: "آزمون به پایان رسید",
         description: "در حال محاسبه نتایج...",
     });
-    router.push(`/exam/${exam?.id}/results`);
+    router.push(`/exam/${exam.id}/results`);
   }
 
   if (!exam) {
@@ -106,7 +109,7 @@ export default function ExamPage() {
           
           {placeholderImage && (
             <div className="relative w-full h-64 mb-6 rounded-2xl overflow-hidden">
-                <Image src={placeholderImage} alt={`Question ${currentQuestion.id}`} layout="fill" objectFit="cover" data-ai-hint="question illustration" />
+                <Image src={placeholderImage} alt={`Question ${currentQuestion.id}`} fill objectFit="cover" data-ai-hint="question illustration" />
             </div>
           )}
 
@@ -143,7 +146,7 @@ export default function ExamPage() {
                 <span>پایان آزمون</span>
             </Button>
           ) : (
-            <Button onClick={handleNext} disabled={currentQuestionIndex === exam.questions.length - 1} className="gap-2">
+            <Button onClick={handleNext} className="gap-2">
                 <span>سوال بعدی</span>
                 <ArrowLeft className="w-4 h-4" />
             </Button>

@@ -5,24 +5,62 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Clock, FileQuestion, TrendingUp, CheckCircle, Percent, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from 'react';
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { exams, history } from "@/lib/mock-data";
+import { exams, history as mockHistory } from "@/lib/mock-data";
 import Header from "@/components/header";
 import GlassCard from "@/components/glass-card";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
+import { getCompletedExams } from "@/lib/results-storage";
+import { HistoryItem } from "@/lib/types";
 
 export default function Home() {
   const router = useRouter();
   const { toast } = useToast();
+  const [completedExamIds, setCompletedExamIds] = useState<Set<string>>(new Set());
+  const [history, setHistory] = useState<HistoryItem[]>(mockHistory);
+
+  useEffect(() => {
+    // This will only run on the client
+    const completed = getCompletedExams();
+    setCompletedExamIds(new Set(Object.keys(completed)));
+    
+    const newHistory: HistoryItem[] = Object.keys(completed).map(examId => {
+      const exam = exams.find(e => e.id === examId);
+      if (!exam) return null;
+
+      const userAnswers = completed[examId];
+      let correctAnswers = 0;
+      const totalQuestions = exam.questions.length;
+      exam.questions.forEach(q => {
+        if (userAnswers[q.id] === q.correctAnswerIndex) {
+          correctAnswers++;
+        }
+      });
+      const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+      
+      return {
+        id: `hist-${examId}`,
+        examId: examId,
+        title: exam.title,
+        date: new Date().toLocaleDateString('fa-IR'),
+        score: score,
+        correctAnswers: correctAnswers,
+        totalQuestions: totalQuestions,
+        rank: Math.floor(Math.random() * 10) + 1, // Mock rank
+      }
+    }).filter((item): item is HistoryItem => item !== null);
+
+    setHistory(prev => [...newHistory, ...prev.filter(h => !completed[h.examId])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+
+  }, []);
 
   const getPlaceholderImage = (id: string) => {
     return PlaceHolderImages.find(img => img.id === id)?.imageUrl ?? 'https://picsum.photos/seed/1/600/400';
   }
-
-  const completedExamIds = new Set(history.map(h => h.examId));
 
   const handleStartExam = (examId: string) => {
     if (completedExamIds.has(examId)) {
@@ -81,8 +119,9 @@ export default function Home() {
                     onClick={() => handleStartExam(exam.id)}
                     className={cn(
                       "w-full transition-colors",
-                      isCompleted ? "bg-gray-500 hover:bg-gray-600" : "bg-primary/80 hover:bg-primary"
+                      isCompleted ? "bg-gray-500 hover:bg-gray-600 cursor-not-allowed" : "bg-primary/80 hover:bg-primary"
                     )}
+                    disabled={isCompleted}
                   >
                     {isCompleted ? <Lock className="ml-2 h-4 w-4" /> : null}
                     {isCompleted ? "تکمیل شده" : "شروع آزمون"}
@@ -114,7 +153,7 @@ export default function Home() {
                     <span className="font-semibold">{item.rank}</span>
                   </div>
                 </div>
-                 <Button variant="outline" className="w-full mt-6 border-accent/50 text-accent hover:bg-accent/20 hover:text-accent">
+                 <Button variant="outline" className="w-full mt-6 border-accent/50 text-accent hover:bg-accent/20 hover:text-accent" onClick={() => router.push(`/exam/${item.examId}/results`)}>
                     مشاهده جزئیات
                   </Button>
               </GlassCard>

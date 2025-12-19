@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   BarChart,
@@ -10,40 +11,82 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { ArrowRight, CheckCircle, Home, XCircle } from "lucide-react";
+import { CheckCircle, Home, XCircle } from "lucide-react";
 
 import { exams } from "@/lib/mock-data";
 import GlassCard from "@/components/glass-card";
 import { Button } from "@/components/ui/button";
+import { getExamResult } from "@/lib/results-storage";
 
-const MOCK_RESULTS = {
-  score: 80,
-  correct: 4,
-  incorrect: 1,
-  total: 5,
+type Results = {
+  score: number;
+  correct: number;
+  incorrect: number;
+  unanswered: number;
+  total: number;
 };
 
 export default function ResultsPage() {
   const params = useParams();
   const router = useRouter();
   const exam = exams.find((e) => e.id === params.id);
+  const [results, setResults] = useState<Results | null>(null);
 
-  const data = [
-    { name: "صحیح", value: MOCK_RESULTS.correct, color: "hsl(var(--chart-1))" },
-    { name: "غلط", value: MOCK_RESULTS.incorrect, color: "hsl(var(--chart-3))" },
-    { name: "بدون پاسخ", value: MOCK_RESULTS.total - MOCK_RESULTS.correct - MOCK_RESULTS.incorrect, color: "hsl(var(--muted))" },
-  ].sort((a, b) => {
-    if (a.value > b.value) return -1;
-    if (a.value < b.value) return 1;
-    if (a.name === "صحیح") return -1;
-    if (b.name === "صحیح") return 1;
-    return 0;
-  });
+  useEffect(() => {
+    if (!exam) return;
+
+    const savedResult = getExamResult(exam.id);
+    if (savedResult) {
+      let correct = 0;
+      let incorrect = 0;
+      const total = exam.questions.length;
+      
+      exam.questions.forEach(question => {
+        const userAnswer = savedResult[question.id];
+        if (userAnswer !== undefined) {
+          if (userAnswer === question.correctAnswerIndex) {
+            correct++;
+          } else {
+            incorrect++;
+          }
+        }
+      });
+
+      const unanswered = total - correct - incorrect;
+      const score = total > 0 ? Math.round((correct / total) * 100) : 0;
+      
+      setResults({ score, correct, incorrect, unanswered, total });
+    }
+  }, [exam]);
+
+  const data = useMemo(() => {
+    if (!results) return [];
+
+    return [
+      { name: "صحیح", value: results.correct, color: "hsl(var(--chart-1))" },
+      { name: "غلط", value: results.incorrect, color: "hsl(var(--chart-3))" },
+      { name: "بدون پاسخ", value: results.unanswered, color: "hsl(var(--muted))" },
+    ].sort((a, b) => {
+      if (a.value > b.value) return -1;
+      if (a.value < b.value) return 1;
+      if (a.name === "صحیح") return -1;
+      if (b.name === "صحیح") return 1;
+      return 0;
+    });
+  }, [results]);
 
   if (!exam) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <h1 className="text-2xl">آزمون یافت نشد.</h1>
+      </div>
+    );
+  }
+
+  if (!results) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <h1 className="text-2xl">در حال محاسبه نتایج...</h1>
       </div>
     );
   }
@@ -69,14 +112,14 @@ export default function ResultsPage() {
                         className="text-primary"
                         stroke="currentColor"
                         strokeWidth="2"
-                        strokeDasharray={`${MOCK_RESULTS.score}, 100`}
+                        strokeDasharray={`${results.score}, 100`}
                         strokeLinecap="round"
                         fill="none"
                         d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-5xl font-bold">{MOCK_RESULTS.score}</span>
+                    <span className="text-5xl font-bold">{results.score}</span>
                     <span className="text-muted-foreground">امتیاز</span>
                 </div>
             </div>
@@ -87,14 +130,14 @@ export default function ResultsPage() {
                       <CheckCircle className="w-6 h-6 text-green-400" />
                       <span className="text-lg">پاسخ‌های صحیح</span>
                   </div>
-                  <span className="text-xl font-bold">{MOCK_RESULTS.correct}</span>
+                  <span className="text-xl font-bold">{results.correct}</span>
               </GlassCard>
               <GlassCard className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                       <XCircle className="w-6 h-6 text-red-500" />
                       <span className="text-lg">پاسخ‌های غلط</span>
                   </div>
-                  <span className="text-xl font-bold">{MOCK_RESULTS.incorrect}</span>
+                  <span className="text-xl font-bold">{results.incorrect}</span>
               </GlassCard>
           </div>
         </div>
