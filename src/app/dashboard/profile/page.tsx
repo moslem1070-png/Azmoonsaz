@@ -49,8 +49,16 @@ export default function ProfilePage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     
-    // Extract nationalId from email
-    const nationalId = user?.email?.split('@')[0] ?? '';
+    // Helper function to extract the pure ID part from the email
+    const getNationalIdFromEmail = (email?: string | null): string => {
+        if (!email) return '';
+        const emailPrefix = email.split('@')[0];
+        const parts = emailPrefix.split('-');
+        // Return the last part, which should be the ID
+        return parts.length > 1 ? parts[parts.length - 1] : emailPrefix;
+    };
+    
+    const nationalId = getNationalIdFromEmail(user?.email);
 
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema),
@@ -70,7 +78,7 @@ export default function ProfilePage() {
         if (user) {
             form.reset({
                 fullName: user.displayName || '',
-                nationalId: user.email?.split('@')[0] ?? '',
+                nationalId: getNationalIdFromEmail(user.email),
                 oldPassword: '',
                 newPassword: '',
                 confirmPassword: '',
