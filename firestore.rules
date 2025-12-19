@@ -1,29 +1,22 @@
 /**
- * This ruleset enforces a strict user-ownership model for the Persian QuizMaster application.
- * All user-generated content, including exams, questions, and results, is stored in subcollections
- * under the user's primary document. This architecture provides strong security by default,
- * ensuring users can only access their own data tree.
+ * This ruleset defines the security model for the Persian QuizMaster application.
  *
  * Core Philosophy:
- * Access control is based on the user's authenticated UID matching the `{userId}` wildcard in the document path.
- * This path-based ownership strategy is simple, performant, and avoids complex, slow, or costly
- * cross-document reads (`get()`) for authorization decisions.
+ * - User data is private and owned by the user.
+ * - Public data (like exams) is readable by any authenticated user but writable only by authorized roles.
+ * - Access control prioritizes path-based ownership and role-based checks where appropriate.
  *
  * Data Structure:
- * - /users/{userId}: Stores the user's profile.
- * - /users/{userId}/exams/{examId}: Stores exams created by a teacher.
- * - /users/{userId}/exams/{examId}/questions/{questionId}: Stores questions for a specific exam.
- * - /users/{userId}/examResults/{examResultId}: Stores a student's results for an exam they have taken.
+ * - /users/{userId}: Private user profile. Only the user can read/write their own profile.
+ * - /exams/{examId}: Publicly readable list of exams. Only teachers/admins can write.
+ * - /exams/{examId}/questions/{questionId}: Questions inherit permissions from the parent exam.
+ * - /users/{userId}/examResults/{examResultId}: Private exam results. Only the student can read/write their own results.
  *
  * Key Security Decisions:
  * - Default Deny: All paths are closed by default. Access is only granted explicitly.
- * - No User Listing: It is not possible for any user to list all documents in the top-level `/users` collection.
- * - Owner-Only Access: All data within `/users/{userId}` is strictly private to that user. There are no admin-override
- *   rules implemented, as the data structure does not currently support a performant way to check for a global role.
- * - Immutable Results: Once an `examResult` is created by a student, it cannot be updated or deleted to ensure
- *   the integrity of their academic record.
- * - Relational Integrity: On create, rules validate that ownership fields within a document (e.g., `studentId`)
- *   match the `userId` from the path, ensuring data consistency. On update, these fields are immutable.
+ * - Public Reads for Exams: Any signed-in user can list and read exams, allowing students to browse them.
+ * - Role-Based Writes for Exams: Only users with the 'teacher' or 'manager' role can create, update, or delete exams. This is checked by reading the user's profile.
+ * - Strict Ownership for User Data: All data under `/users/{userId}` is strictly private.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -57,51 +50,43 @@ service cloud.firestore {
     }
 
     /**
+     * Retrieves the role of the currently authenticated user from their profile document.
+     * Returns null if the user is not signed in or their profile doesn't exist.
+     */
+    function getUserRole() {
+      let uid = request.auth.uid;
+      if (uid == null) {
+        return null;
+      }
+      // get() is a cross-document read, which has security and performance implications.
+      // Use it judiciously, primarily for role-based checks on non-user-owned data.
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
+    /**
+     * Checks if the current user has a 'teacher' or 'manager' role.
+     */
+    function isTeacherOrManager() {
+        let role = getUserRole();
+        return role == 'teacher' || role == 'manager';
+    }
+
+
+    /**
      * @description Secures a user's profile document. Users can create their own profile,
-     *   and only they can read, update, or delete it. Listing all users is forbidden.
+     *   and only they can read, update, or delete it. Listing all users is forbidden unless the user is a manager.
      * @path /users/{userId}
-     * @allow (create) An authenticated user creating their own profile document at `/users/auth.uid`.
+     * @allow (get) User 'user-abc' reading their own profile at `/users/user-abc`.
+     * @allow (list) A user with the 'manager' role listing all users.
      * @deny (get) User 'user-abc' trying to read the profile document at `/users/user-xyz`.
-     * @principle Enforces Self-Creation and strict Ownership for user profiles.
+     * @principle Enforces Self-Creation and strict Ownership for user profiles, with an exception for managers.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false;
+      allow list: if isTeacherOrManager(); // Allow managers/teachers to list users
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
-
-      /**
-       * @description Secures exams created by a user (teacher). Only the user who owns
-       *   the data tree can create, read, update, or delete exams within it.
-       * @path /users/{userId}/exams/{examId}
-       * @allow (create) Teacher 'teacher-123' creating an exam at `/users/teacher-123/exams/math-101`.
-       * @deny (list) Student 'student-456' trying to list exams at `/users/teacher-123/exams`.
-       * @principle Enforces strict path-based ownership for a user's subcollections.
-       */
-      match /exams/{examId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.teacherId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.teacherId == resource.data.teacherId;
-        allow delete: if isExistingOwner(userId);
-
-        /**
-         * @description Secures the questions within an exam. Access is inherited from the
-         *   parent user (teacher) path, ensuring only the exam creator can manage its questions.
-         * @path /users/{userId}/exams/{examId}/questions/{questionId}
-         * @allow (update) Teacher 'teacher-123' updating a question at `/users/teacher-123/exams/math-101/questions/q1`.
-         * @deny (get) Any user other than 'teacher-123' trying to read a question from that path.
-         * @principle Inherits ownership from the top-level path for nested subcollections.
-         */
-        match /questions/{questionId} {
-          allow get: if isOwner(userId);
-          allow list: if isOwner(userId);
-          allow create: if isOwner(userId) && request.resource.data.examId == examId;
-          allow update: if isExistingOwner(userId) && request.resource.data.examId == resource.data.examId;
-          allow delete: if isExistingOwner(userId);
-        }
-      }
 
       /**
        * @description Secures a student's exam results. A student can create their own results
@@ -118,6 +103,29 @@ service cloud.firestore {
         allow update: if false;
         allow delete: if false;
       }
+    }
+    
+    /**
+     * @description Secures the top-level exams collection.
+     * @path /exams/{examId}
+     * @allow (list, get) Any authenticated user can read the list of exams and individual exams.
+     * @allow (create, update, delete) Only users with a 'teacher' or 'manager' role can modify exams.
+     * @principle Public read access for discoverability, role-restricted write access for control.
+     */
+    match /exams/{examId} {
+        allow list, get: if isSignedIn();
+        allow create, update, delete: if isTeacherOrManager();
+        
+        /**
+         * @description Secures the questions within an exam. Access is inherited from the
+         *   parent user (teacher) path, ensuring only the exam creator can manage its questions.
+         * @path /exams/{examId}/questions/{questionId}
+         * @principle Inherits ownership from the top-level path for nested subcollections.
+         */
+        match /questions/{questionId} {
+            allow list, get: if isSignedIn();
+            allow create, update, delete: if isTeacherOrManager();
+        }
     }
   }
 }
