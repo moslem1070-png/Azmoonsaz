@@ -5,7 +5,7 @@ import { BookOpen, User, LogOut, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,7 +51,6 @@ const Header = ({ children }: { children?: ReactNode }) => {
                     <DropdownMenuTrigger className="flex items-center gap-2 outline-none">
                       <span className="text-white font-medium">{user?.displayName ?? 'کاربر'}</span>
                       <Avatar>
-                          <AvatarImage src={`https://picsum.photos/seed/${user?.uid ?? 'avatar'}/100/100`} />
                           <AvatarFallback>
                               <User />
                           </AvatarFallback>
