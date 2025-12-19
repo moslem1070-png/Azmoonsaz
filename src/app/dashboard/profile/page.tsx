@@ -7,6 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Key, User, Fingerprint, Lock } from 'lucide-react';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, updateEmail } from 'firebase/auth';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+
 
 import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
@@ -14,7 +16,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
+import type { User as AppUser } from '@/lib/types';
+
 
 // Helper to get role from email
 const getRoleFromEmail = (email?: string | null): string => {
@@ -29,7 +33,8 @@ const createEmailFromNationalId = (nationalId: string, role: string) => {
 }
 
 const formSchema = z.object({
-    fullName: z.string().min(3, { message: 'نام و نام خانوادگی باید حداقل ۳ حرف باشد.' }),
+    firstName: z.string().min(1, { message: 'نام الزامی است.' }),
+    lastName: z.string().min(1, { message: 'نام خانوادگی الزامی است.' }),
     nationalId: z.string().min(1, { message: "کد ملی الزامی است."}),
     oldPassword: z.string().optional(),
     newPassword: z.string().optional(),
@@ -65,26 +70,18 @@ type FormData = z.infer<typeof formSchema>;
 export default function ProfilePage() {
     const router = useRouter();
     const { user, isUserLoading } = useUser();
-    const auth = useAuth();
+    const firestore = useFirestore();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
+    const [userProfile, setUserProfile] = useState<AppUser | null>(null);
+    const role = localStorage.getItem('userRole');
     
-    // Helper function to extract the pure ID part from the email
-    const getNationalIdFromEmail = (email?: string | null): string => {
-        if (!email) return '';
-        const emailPrefix = email.split('@')[0];
-        const parts = emailPrefix.split('-');
-        return parts.length > 1 ? parts[parts.length - 1] : emailPrefix;
-    };
-    
-    const nationalId = getNationalIdFromEmail(user?.email);
-    const role = getRoleFromEmail(user?.email);
-
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            fullName: '',
-            nationalId: nationalId,
+            firstName: '',
+            lastName: '',
+            nationalId: '',
             oldPassword: '',
             newPassword: '',
             confirmPassword: '',
@@ -95,42 +92,58 @@ export default function ProfilePage() {
         if (!isUserLoading && !user) {
             router.push('/');
         }
-        if (user) {
-            form.reset({
-                fullName: user.displayName || '',
-                nationalId: getNationalIdFromEmail(user.email),
-                oldPassword: '',
-                newPassword: '',
-                confirmPassword: '',
-            });
+        if (user && firestore) {
+            const fetchUserProfile = async () => {
+                const userDocRef = doc(firestore, 'users', user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    const profileData = userDocSnap.data() as AppUser;
+                    setUserProfile(profileData);
+                    form.reset({
+                        firstName: profileData.firstName,
+                        lastName: profileData.lastName,
+                        nationalId: profileData.nationalId,
+                    });
+                } else {
+                    // Fallback to auth data if firestore doc doesn't exist
+                     const displayName = user.displayName || '';
+                     const nameParts = displayName.split(' ');
+                     form.reset({
+                        firstName: nameParts[0] || '',
+                        lastName: nameParts.slice(1).join(' ') || '',
+                        nationalId: '', // Cannot get this from auth
+                    });
+                }
+            };
+            fetchUserProfile();
         }
-    }, [user, isUserLoading, router, form]);
+    }, [user, isUserLoading, router, form, firestore]);
 
     const onSubmit: SubmitHandler<FormData> = async (data) => {
         setLoading(true);
-        if (!user || !user.email) {
-            toast({ variant: 'destructive', title: 'خطا', description: 'کاربر احراز هویت نشده است.' });
+        if (!user || !user.email || !userProfile || !firestore) {
+            toast({ variant: 'destructive', title: 'خطا', description: 'کاربر احراز هویت نشده یا پروفایل یافت نشد.' });
             setLoading(false);
             return;
         }
 
-        const originalNationalId = getNationalIdFromEmail(user.email);
-        const didNationalIdChange = data.nationalId !== originalNationalId;
+        const didNationalIdChange = data.nationalId !== userProfile.nationalId;
         const didPasswordChange = !!data.newPassword;
-        const didFullNameChange = data.fullName !== user.displayName;
+        const didNameChange = data.firstName !== userProfile.firstName || data.lastName !== userProfile.lastName;
+        const fullName = `${data.firstName} ${data.lastName}`;
 
-        if (!didNationalIdChange && !didPasswordChange && !didFullNameChange) {
+        if (!didNationalIdChange && !didPasswordChange && !didNameChange) {
             toast({ title: 'توجه', description: 'هیچ تغییری برای ذخیره وجود ندارد.' });
             setLoading(false);
             return;
         }
-
+        
         if ((didNationalIdChange || didPasswordChange) && !data.oldPassword) {
             toast({ variant: 'destructive', title: 'خطا', description: 'برای تغییر کد ملی یا رمز عبور، باید رمز عبور فعلی را وارد کنید.' });
             setLoading(false);
             return;
         }
-
+        
         if (role === 'student' && !/^\d{10}$/.test(data.nationalId)) {
             toast({ variant: 'destructive', title: 'خطا', description: 'کد ملی دانش‌آموز باید ۱۰ رقم و فقط شامل عدد باشد.' });
             setLoading(false);
@@ -139,28 +152,35 @@ export default function ProfilePage() {
 
 
         try {
-            // Re-authenticate if necessary
+            // Re-authenticate if necessary for critical changes
             if ((didNationalIdChange || didPasswordChange) && data.oldPassword) {
-                const credential = EmailAuthProvider.credential(user.email, data.oldPassword!);
+                const credential = EmailAuthProvider.credential(user.email, data.oldPassword);
                 await reauthenticateWithCredential(user, credential);
             }
 
             let successMessages = [];
+            const userDocRef = doc(firestore, 'users', user.uid);
+            let firestoreUpdates: Partial<AppUser> = {};
 
-            // Update displayName if changed
-            if (didFullNameChange) {
-                await updateProfile(user, { displayName: data.fullName });
+            // Update Auth displayName if changed
+            if (didNameChange) {
+                await updateProfile(user, { displayName: fullName });
+                firestoreUpdates.firstName = data.firstName;
+                firestoreUpdates.lastName = data.lastName;
                 successMessages.push('نام شما با موفقیت به‌روزرسانی شد.');
             }
             
-            // Update email (nationalId) if changed
+            // Update Auth email (based on nationalId) if changed
             if (didNationalIdChange) {
-                const newEmail = createEmailFromNationalId(data.nationalId, role);
+                const newEmail = createEmailFromNationalId(data.nationalId, userProfile.role);
                 await updateEmail(user, newEmail);
+                firestoreUpdates.nationalId = data.nationalId;
                 successMessages.push('کد ملی شما با موفقیت تغییر کرد.');
-                 // Update the local storage role to reflect the new email structure potential
-                const newRole = getRoleFromEmail(newEmail);
-                localStorage.setItem('userRole', newRole);
+            }
+            
+            // Update Firestore document if there are changes
+            if (Object.keys(firestoreUpdates).length > 0) {
+                 await updateDoc(userDocRef, firestoreUpdates);
             }
 
             // Update password if changed
@@ -169,7 +189,7 @@ export default function ProfilePage() {
                 successMessages.push('رمز عبور شما با موفقیت تغییر کرد.');
             }
 
-            toast({ title: 'موفق', description: successMessages.join(' ') });
+            toast({ title: 'موفق', description: successMessages.join(' ') || 'اطلاعات با موفقیت به‌روزرسانی شد.' });
             form.reset({ ...form.getValues(), oldPassword: '', newPassword: '', confirmPassword: '' });
 
         } catch (error: any) {
@@ -186,7 +206,7 @@ export default function ProfilePage() {
         }
     };
     
-    if (isUserLoading || !user) {
+    if (isUserLoading || !user || !userProfile) {
         return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
     }
 
@@ -198,22 +218,37 @@ export default function ProfilePage() {
                     <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-center">ویرایش پروفایل</h1>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            <FormField
-                                control={form.control}
-                                name="fullName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>نام و نام خانوادگی</FormLabel>
-                                        <div className="relative">
-                                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <FormField
+                                    control={form.control}
+                                    name="firstName"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>نام</FormLabel>
+                                            <div className="relative">
+                                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                                                <FormControl>
+                                                    <Input placeholder="نام" {...field} className="pl-10 text-right" />
+                                                </FormControl>
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                 <FormField
+                                    control={form.control}
+                                    name="lastName"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>نام خانوادگی</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="نام کامل خود را وارد کنید" {...field} className="pl-10 text-right" />
+                                                <Input placeholder="نام خانوادگی" {...field} className="text-right" />
                                             </FormControl>
-                                        </div>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
 
                             <FormField
                                 control={form.control}

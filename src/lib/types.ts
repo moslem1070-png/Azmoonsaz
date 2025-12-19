@@ -45,9 +45,8 @@ export type HistoryItem = {
 // Represents a user document in Firestore
 export type User = {
   id: string; // This will be the Firebase Auth UID
-  displayName: string;
-  email: string;
+  nationalId: string;
+  firstName: string;
+  lastName: string;
   role: 'student' | 'teacher';
 };
-
-    

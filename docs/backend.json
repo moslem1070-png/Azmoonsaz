@@ -8,15 +8,15 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the User entity."
+          "description": "Unique identifier for the User entity, matching the Firebase Auth UID."
         },
         "role": {
           "type": "string",
-          "description": "The role of the user (e.g., 'admin', 'teacher', 'student')."
+          "description": "The role of the user (e.g., 'teacher', 'student')."
         },
         "nationalId": {
           "type": "string",
-          "description": "The user's national ID."
+          "description": "The user's national ID (for students) or username (for teachers)."
         },
         "firstName": {
           "type": "string",
@@ -47,16 +47,15 @@
         },
         "teacherId": {
           "type": "string",
-          "description": "Reference to Teacher. (Relationship: Teacher 1:N Exam)"
+          "description": "Reference to Teacher's UID. (Relationship: Teacher 1:N Exam)"
         },
         "title": {
           "type": "string",
           "description": "The title of the exam."
         },
-        "coverImageURL": {
+        "coverImageId": {
           "type": "string",
-          "description": "URL of the cover image for the exam.",
-          "format": "uri"
+          "description": "ID of the cover image for the exam."
         },
         "difficulty": {
           "type": "string",
@@ -64,14 +63,14 @@
         },
         "timer": {
           "type": "number",
-          "description": "The time limit for the exam, in seconds."
+          "description": "The time limit for the exam, in minutes."
         }
       },
       "required": [
         "id",
         "teacherId",
         "title",
-        "coverImageURL",
+        "coverImageId",
         "difficulty",
         "timer"
       ]
@@ -131,7 +130,7 @@
         },
         "studentId": {
           "type": "string",
-          "description": "Reference to Student. (Relationship: Student 1:N ExamResult)"
+          "description": "Reference to Student's UID. (Relationship: Student 1:N ExamResult)"
         },
         "examId": {
           "type": "string",
@@ -176,11 +175,11 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profiles. Uses path-based ownership for private user data. This ensures that only the authenticated user (or an admin) can access their profile.",
+          "description": "Stores user profiles. The document ID is the Firebase Auth UID. This ensures that only the authenticated user can access their profile, enforcing ownership via path.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique ID of the user."
+              "description": "The unique ID of the user (matches Firebase Auth UID)."
             }
           ]
         }
@@ -192,7 +191,7 @@
           "schema": {
             "$ref": "#/backend/entities/Exam"
           },
-          "description": "Stores all exams. This is a top-level collection to allow public read access for all authenticated users (students browsing exams). Write access is restricted to teachers/admins.",
+          "description": "Stores all exams in a top-level collection. This allows public read access for all authenticated users (students browsing exams), while write access is restricted to teachers.",
           "params": [
             {
               "name": "examId",
@@ -208,7 +207,7 @@
           "schema": {
             "$ref": "#/backend/entities/Question"
           },
-          "description": "Stores questions for a specific exam. This is a subcollection of an exam.",
+          "description": "Stores questions for a specific exam as a subcollection. Permissions are inherited from the parent exam.",
           "params": [
             {
               "name": "examId",
@@ -228,7 +227,7 @@
           "schema": {
             "$ref": "#/backend/entities/ExamResult"
           },
-          "description": "Stores exam results for students. Path-based ownership ensures that only the student (or an admin) can access their results.",
+          "description": "Stores private exam results for each student. Path-based ownership ensures that only the student themselves can access their results.",
           "params": [
             {
               "name": "userId",
@@ -242,6 +241,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support the Persian QuizMaster application with a focus on authorization independence, clarity, and scalability. The structure leverages path-based ownership for user-related data and a dedicated collection for global roles. Authorization independence is achieved by structuring data such that security rules do not rely on hierarchical `get()` calls. This is accomplished via path-based ownership.\\n\\n**Explanation of Authorization Independence:**\\nUser data and related entities (exams, questions, results) are organized under the `/users/{userId}` path, ensuring clear ownership and simplifying security rules. Because the path inherently defines ownership, no additional data needs to be read from parent documents to determine authorization. For collaborative data involving multiple users, a membership map (`members`) can be added to relevant documents, if required in future features.\\n\\n**Support for QAPs (Rules are not Filters):**\\n\\nPath-based ownership `/users/{userId}/exams` supports secure `list` operations. Security rules can efficiently filter the results based on the `userId` in the path without needing to inspect the contents of each exam document.\\n\\n**Additional Considerations**\\n\\n*   The design assumes user roles (admin, teacher, student) are managed at the authentication level. If roles need to be dynamically managed within the application, consider a dedicated `/roles/{userId}` collection."
+    "reasoning": "This Firestore structure is designed for security and scalability. User data is keyed by the Auth UID for strong ownership (`/users/{userId}`). Exam results are a subcollection of the user, inheriting this ownership. Exams are in a top-level collection (`/exams`) to allow global read access for all authenticated users, with writes restricted by security rules to 'teacher' roles. This avoids complex cross-document reads in security rules and ensures a clear, secure data model."
   }
 }

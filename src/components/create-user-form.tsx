@@ -18,19 +18,19 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 const formSchema = z.object({
   fullName: z.string().min(3, { message: 'نام کامل باید حداقل ۳ حرف باشد.' }),
-  username: z.string().min(1, { message: 'کد ملی الزامی است.' }),
+  nationalId: z.string().min(1, { message: 'کد ملی الزامی است.' }),
   password: z.string().min(8, { message: 'رمز عبور باید حداقل ۸ کاراکتر باشد.' }),
 }).refine(data => {
-    return /^\d{10}$/.test(data.username);
+    return /^\d{10}$/.test(data.nationalId);
 }, {
     message: 'کد ملی باید ۱۰ رقم و فقط شامل عدد باشد.',
-    path: ['username'],
+    path: ['nationalId'],
 });
 
 type FormData = z.infer<typeof formSchema>;
 
-const createEmailFromUsername = (username: string) => {
-    return `student-${username}@quizmaster.com`;
+const createEmailFromNationalId = (nationalId: string) => {
+    return `student-${nationalId}@quizmaster.com`;
 }
 
 export default function CreateUserForm() {
@@ -43,14 +43,14 @@ export default function CreateUserForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: '',
-      username: '',
+      nationalId: '',
       password: '',
     },
   });
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     setLoading(true);
-    const email = createEmailFromUsername(data.username);
+    const email = createEmailFromNationalId(data.nationalId);
 
     try {
       // Step 1: Create user in Auth
@@ -60,12 +60,13 @@ export default function CreateUserForm() {
       // Step 2: Update user's display name in Auth
       await updateProfile(user, { displayName: data.fullName });
 
-      // Step 3: Create user document in Firestore
+      // Step 3: Create user document in Firestore, identified by the user's UID from Auth
       const userDocRef = doc(firestore, 'users', user.uid);
       const newUserDoc = {
           id: user.uid,
-          displayName: data.fullName,
-          email: user.email,
+          nationalId: data.nationalId,
+          firstName: data.fullName.split(' ')[0] || '',
+          lastName: data.fullName.split(' ').slice(1).join(' ') || '',
           role: 'student', // Always create a student
       };
 
@@ -131,7 +132,7 @@ export default function CreateUserForm() {
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <FormField
                 control={form.control}
-                name="username"
+                name="nationalId"
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>کد ملی دانش‌آموز</FormLabel>
@@ -172,5 +173,3 @@ export default function CreateUserForm() {
     </Form>
   );
 }
-
-    

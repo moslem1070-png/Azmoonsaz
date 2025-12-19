@@ -13,8 +13,6 @@ import GlassCard from '@/components/glass-card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -130,12 +128,13 @@ export default function LoginPage() {
         
         await updateProfile(user, { displayName: fullName });
 
-        // Also create a user document in Firestore
+        // Also create a user document in Firestore, identified by the user's UID from Auth
         const userDocRef = doc(firestore, 'users', user.uid);
         const newUserDoc = {
           id: user.uid,
-          displayName: fullName,
-          email: user.email,
+          nationalId: nationalId,
+          firstName: fullName.split(' ')[0] || '',
+          lastName: fullName.split(' ').slice(1).join(' ') || '',
           role: 'student',
         };
         
@@ -362,5 +361,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    

@@ -32,7 +32,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 
 type Role = 'student' | 'teacher';
 
@@ -106,9 +105,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
                     <p className="text-sm font-medium leading-none">
                       {user?.displayName}
                     </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user?.email}
-                    </p>
+                    {/* We no longer show the synthetic email */}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -171,5 +168,3 @@ const Header = ({ children }: { children?: ReactNode }) => {
 };
 
 export default Header;
-
-    

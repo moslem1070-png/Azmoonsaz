@@ -75,15 +75,6 @@ export default function ManageUsersPage() {
     }
   }
 
-  // Helper to extract the username/nationalId from the user's email
-   const getIdentifier = (email?: string | null): string => {
-        if (!email) return 'N/A';
-        const emailPrefix = email.split('@')[0];
-        const parts = emailPrefix.split('-');
-        return parts.length > 1 ? parts.slice(1).join('-') : emailPrefix;
-    };
-
-
   const isLoading = isUserLoading || (usersLoading && userRole === 'teacher');
 
   if (isLoading) {
@@ -134,13 +125,13 @@ export default function ManageUsersPage() {
                 <TableBody>
                   {users.map((u: AppUser) => (
                     <TableRow key={u.id}>
-                      <TableCell className="font-medium text-right">{u.displayName}</TableCell>
+                      <TableCell className="font-medium text-right">{`${u.firstName} ${u.lastName}`}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant={getRoleBadgeVariant(u.role as Role)}>
                           {getRoleText(u.role as Role)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right hidden sm:table-cell text-muted-foreground">{getIdentifier(u.email)}</TableCell>
+                      <TableCell className="text-right hidden sm:table-cell text-muted-foreground">{u.nationalId}</TableCell>
                       <TableCell className="text-left">
                         {u.role === 'student' && (
                           <div className="flex gap-2 justify-end">
@@ -171,5 +162,3 @@ export default function ManageUsersPage() {
     </div>
   );
 }
-
-    
