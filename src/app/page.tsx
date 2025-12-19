@@ -92,12 +92,6 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    if (selectedRole === 'teacher' && authMode === 'signup') {
-        toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت‌نام برای مدیر یا معلم وجود ندارد.' });
-        setLoading(false);
-        return;
-    }
-
     if (!nationalId || !password) {
       toast({ variant: 'destructive', title: 'خطا', description: 'کد ملی و رمز عبور الزامی است.' });
       setLoading(false);
@@ -110,11 +104,14 @@ export default function LoginPage() {
         return;
     }
 
-    const email = createEmailFromNationalId(nationalId, selectedRole, selectedRole === 'teacher' ? teacherSubRole : undefined);
-
     try {
-      let userCredential;
       if (authMode === 'signup') {
+        // --- SIGNUP LOGIC (Student only) ---
+         if (selectedRole === 'teacher') {
+            toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت‌نام برای مدیر یا معلم وجود ندارد.' });
+            setLoading(false);
+            return;
+        }
         if (passwordError) {
             toast({ variant: 'destructive', title: 'خطا', description: passwordError });
             setLoading(false);
@@ -131,35 +128,71 @@ export default function LoginPage() {
             return;
         }
 
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const email = createEmailFromNationalId(nationalId, 'student');
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
-        await updateProfile(userCredential.user, {
-            displayName: fullName,
-        });
+        await updateProfile(userCredential.user, { displayName: fullName });
 
         toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
-
-      } else { // Login mode
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: 'ورود موفق', description: 'خوش آمدید!' });
-      }
-
-      localStorage.setItem('userRole', selectedRole);
-
-      if (selectedRole === 'teacher') {
-        router.push('/dashboard/teacher');
-      } else {
+        localStorage.setItem('userRole', 'student');
         router.push('/dashboard');
+
+      } else {
+        // --- LOGIN LOGIC ---
+        const primarySubRole = selectedRole === 'teacher' ? teacherSubRole : undefined;
+        const primaryEmail = createEmailFromNationalId(nationalId, selectedRole, primarySubRole);
+
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, primaryEmail, password);
+            localStorage.setItem('userRole', selectedRole);
+            toast({ title: 'ورود موفق', description: 'خوش آمدید!' });
+
+            if (selectedRole === 'teacher') {
+                router.push('/dashboard/teacher');
+            } else {
+                router.push('/dashboard');
+            }
+        } catch (error: any) {
+            // Handle specific login errors
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                 // To give a more specific error, we can try to sign in with the *other* teacher sub-role
+                 // to see if the user exists but is trying to log in with the wrong role.
+                 if (selectedRole === 'teacher') {
+                    const secondarySubRole = teacherSubRole === 'manager' ? 'teacher' : 'manager';
+                    const secondaryEmail = createEmailFromNationalId(nationalId, selectedRole, secondarySubRole);
+                    try {
+                        // We don't care about the password, just seeing if the user exists.
+                        // A wrong password here will still throw, which is fine.
+                        await signInWithEmailAndPassword(auth, secondaryEmail, "any-dummy-password-to-check-existence");
+                         // If this succeeds (it shouldn't with a dummy password), it's an unexpected state.
+                    } catch (secondaryError: any) {
+                         if (secondaryError.code !== 'auth/wrong-password') {
+                            // If the error for the other role is NOT 'wrong-password', it means the user doesn't exist for that role either.
+                            // So, the original error for invalid credentials is correct.
+                            toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
+                         } else {
+                            // If the error for the other role *is* 'wrong-password', it means the user exists but with the other role.
+                            toast({ variant: 'destructive', title: 'خطا در ورود', description: 'شما با این نقش کاربری نمی‌توانید وارد شوید.' });
+                         }
+                         setLoading(false);
+                         return;
+                    }
+                 }
+                 // Default error for students or if the teacher check fails
+                 toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
+            } else {
+                // Handle other Firebase auth errors
+                const errorMessage = 'خطایی در هنگام ورود رخ داد.';
+                toast({ variant: 'destructive', title: 'خطا', description: errorMessage });
+            }
+        }
       }
 
     } catch (error: any) {
       console.error(error);
-      const errorMessage =
-        error.code === 'auth/user-not-found' ? 'کاربری با این مشخصات یافت نشد.' :
-        error.code === 'auth/wrong-password' ? 'رمز عبور اشتباه است.' :
+       const errorMessage =
         error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلا ثبت‌نام کرده است.' :
-        error.code === 'auth/invalid-credential' ? 'اطلاعات ورود نامعتبر است.' :
-        'خطایی در هنگام ورود یا ثبت‌نام رخ داد.';
+        'خطایی در هنگام پردازش درخواست شما رخ داد.';
       toast({ variant: 'destructive', title: 'خطا', description: errorMessage });
     } finally {
       setLoading(false);
@@ -170,7 +203,7 @@ export default function LoginPage() {
     if (authMode === 'login') {
       return selectedRole === 'teacher' ? 'ورود مدیر / معلم' : 'ورود دانش‌آموز';
     }
-    return selectedRole === 'teacher' ? 'ثبت‌نام مدیر / معلم' : 'ثبت‌نام دانش‌آموز';
+    return 'ثبت‌نام دانش‌آموز';
   };
 
   const formVariants = {
@@ -182,11 +215,6 @@ export default function LoginPage() {
   if (isUserLoading || user) {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
   }
-
-  const isSignupButtonDisabled = () => {
-    if (authMode !== 'signup') return false;
-    return loading || !!nationalIdError || !!passwordError;
-  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#302851] to-[#1A162E] p-4">
@@ -326,33 +354,31 @@ export default function LoginPage() {
           </motion.div>
         </AnimatePresence>
 
-        <div className="flex items-center justify-center space-x-reverse space-x-2">
-            <Button
-              variant="link"
-              onClick={() => setAuthMode('login')}
-              className={cn(
-                'text-muted-foreground transition-colors',
-                authMode === 'login' && 'font-bold text-accent'
-              )}
-            >
-              ورود
-            </Button>
-            {selectedRole === 'student' && (
-              <>
-                <div className="h-4 w-px bg-border"></div>
-                <Button
-                  variant="link"
-                  onClick={() => setAuthMode('signup')}
-                  className={cn(
-                    'text-muted-foreground transition-colors',
-                    authMode === 'signup' && 'font-bold text-accent'
-                  )}
-                >
-                  ثبت‌نام
-                </Button>
-              </>
-            )}
-        </div>
+        {selectedRole === 'student' && (
+          <div className="flex items-center justify-center space-x-reverse space-x-2">
+              <Button
+                variant="link"
+                onClick={() => setAuthMode('login')}
+                className={cn(
+                  'text-muted-foreground transition-colors',
+                  authMode === 'login' && 'font-bold text-accent'
+                )}
+              >
+                ورود
+              </Button>
+              <div className="h-4 w-px bg-border"></div>
+              <Button
+                variant="link"
+                onClick={() => setAuthMode('signup')}
+                className={cn(
+                  'text-muted-foreground transition-colors',
+                  authMode === 'signup' && 'font-bold text-accent'
+                )}
+              >
+                ثبت‌نام
+              </Button>
+          </div>
+        )}
 
       </GlassCard>
     </div>
