@@ -155,7 +155,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
             className="flex items-center gap-3 group"
           >
             <h1 className="hidden sm:block text-lg sm:text-xl font-bold text-white group-hover:text-primary transition-colors">
-              Persian QuizMaster
+              آزمونساز
             </h1>
             <div className="p-2 bg-primary/80 rounded-lg group-hover:scale-110 transition-transform">
               <BookOpen className="h-6 w-6 text-primary-foreground" />

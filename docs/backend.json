@@ -4,7 +4,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the Persian QuizMaster application.",
+      "description": "Represents a user of the آزمونساز application.",
       "properties": {
         "id": {
           "type": "string",
@@ -39,7 +39,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Exam",
       "type": "object",
-      "description": "Represents an exam in the Persian QuizMaster application.",
+      "description": "Represents an exam in the آزمونساز application.",
       "properties": {
         "id": {
           "type": "string",

@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'Persian QuizMaster',
-  description: 'An online quiz system for students and teachers.',
+  title: 'آزمونساز',
+  description: 'یک سیستم آزمون آنلاین برای دانش آموزان و معلمان.',
 };
 
 export default function RootLayout({
