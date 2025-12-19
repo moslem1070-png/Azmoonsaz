@@ -29,10 +29,15 @@ export default function ManageUsersPage() {
   const firestore = useFirestore();
   const [userRole, setUserRole] = useState<Role | null>(null);
 
-  // Fetch all users from Firestore
+  // Fetch all users from Firestore only if the user is a manager or teacher
   const usersCollection = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'users') : null),
-    [firestore]
+    () => {
+        if (firestore && (userRole === 'manager' || userRole === 'teacher')) {
+            return collection(firestore, 'users');
+        }
+        return null;
+    },
+    [firestore, userRole]
   );
   const { data: users, isLoading: usersLoading } = useCollection<AppUser>(usersCollection);
 
@@ -84,7 +89,7 @@ export default function ManageUsersPage() {
     };
 
 
-  const isLoading = isUserLoading || usersLoading;
+  const isLoading = isUserLoading || (usersLoading && (userRole === 'teacher' || userRole === 'manager'));
 
   if (isLoading) {
     return (
