@@ -93,11 +93,11 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        <div className="h-48 mt-12">
+        <div className="h-48 mt-12" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
-                 <BarChart data={data} layout="vertical" margin={{ right: 40, left: 20 }}>
+                 <BarChart data={data} layout="vertical" margin={{ right: 40, left: 40 }}>
                     <XAxis type="number" hide />
-                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--foreground))' }} width={80} tickMargin={10} />
+                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--foreground))' }} width={80} tickMargin={10} reversed={true}/>
                     <Tooltip
                         cursor={{ fill: 'transparent' }}
                         contentStyle={{
