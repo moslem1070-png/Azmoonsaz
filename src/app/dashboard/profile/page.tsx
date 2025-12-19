@@ -19,7 +19,6 @@ import { useUser, useAuth } from '@/firebase';
 // Helper to get role from email
 const getRoleFromEmail = (email?: string | null): string => {
     if (!email) return 'student';
-    // Handles roles like 'student', 'teacher', 'manager'
     const role = email.split('-')[0].split('@')[0];
     return role;
 }
@@ -75,7 +74,6 @@ export default function ProfilePage() {
         if (!email) return '';
         const emailPrefix = email.split('@')[0];
         const parts = emailPrefix.split('-');
-        // Return the last part, which should be the ID
         return parts.length > 1 ? parts[parts.length - 1] : emailPrefix;
     };
     
@@ -142,7 +140,7 @@ export default function ProfilePage() {
 
         try {
             // Re-authenticate if necessary
-            if (didNationalIdChange || didPasswordChange) {
+            if ((didNationalIdChange || didPasswordChange) && data.oldPassword) {
                 const credential = EmailAuthProvider.credential(user.email, data.oldPassword!);
                 await reauthenticateWithCredential(user, credential);
             }
@@ -166,8 +164,8 @@ export default function ProfilePage() {
             }
 
             // Update password if changed
-            if (didPasswordChange) {
-                await updatePassword(user, data.newPassword!);
+            if (didPasswordChange && data.newPassword) {
+                await updatePassword(user, data.newPassword);
                 successMessages.push('رمز عبور شما با موفقیت تغییر کرد.');
             }
 
@@ -233,8 +231,6 @@ export default function ProfilePage() {
                                     </FormItem>
                                 )}
                             />
-                            
-                            <hr className="border-white/10 my-8" />
                             
                             <FormField
                                 control={form.control}
