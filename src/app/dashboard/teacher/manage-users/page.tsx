@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowRight, Edit, Trash2, UserPlus } from 'lucide-react';
-import { collection } from 'firebase/firestore';
+import { collection, deleteDoc, doc } from 'firebase/firestore';
 
 import Header from '@/components/header';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -18,6 +18,18 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import type { User as AppUser } from '@/lib/types';
 
 
@@ -27,6 +39,7 @@ export default function ManageUsersPage() {
   const router = useRouter();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [userRole, setUserRole] = useState<Role | null>(null);
 
   // Fetch all users from Firestore only if the user is a teacher
@@ -52,6 +65,47 @@ export default function ManageUsersPage() {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
+  
+  const handleEditUser = (userId: string) => {
+    // For now, editing a user profile is complex due to auth.
+    // A proper implementation would require a separate admin-like edit page.
+    // For this version, we can navigate to the generic profile page,
+    // though it will show the logged-in teacher's profile.
+    router.push(`/dashboard/profile`);
+     toast({
+      title: 'قابلیت در دست ساخت',
+      description: 'ویرایش پروفایل کاربران دیگر در نسخه‌های آینده اضافه خواهد شد.',
+    });
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!firestore || !user || user.uid === userId) {
+        toast({
+            variant: 'destructive',
+            title: 'خطا',
+            description: 'شما نمی‌توانید حساب کاربری خودتان را حذف کنید.',
+        });
+        return;
+    }
+    
+    // Note: This only deletes the Firestore document, not the Auth user.
+    // A full user deletion would require a backend function (Firebase Cloud Function).
+    try {
+        await deleteDoc(doc(firestore, 'users', userId));
+        toast({
+            title: 'موفق',
+            description: 'کاربر با موفقیت از پایگاه داده حذف شد.',
+        });
+    } catch(error) {
+        console.error('Error deleting user:', error);
+        toast({
+            variant: 'destructive',
+            title: 'خطا در حذف کاربر',
+            description: 'مشکلی در حذف کاربر از پایگاه داده رخ داد.',
+        });
+    }
+  };
+
 
   const getRoleBadgeVariant = (role: Role) => {
     switch (role) {
@@ -135,14 +189,32 @@ export default function ManageUsersPage() {
                       <TableCell className="text-left">
                         {u.role === 'student' && (
                           <div className="flex gap-2 justify-end">
-                            <Button variant="outline" size="icon" className="h-8 w-8" disabled>
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEditUser(u.id)}>
                               <Edit className="h-4 w-4" />
                               <span className="sr-only">ویرایش</span>
                             </Button>
-                            <Button variant="destructive" size="icon" className="h-8 w-8" disabled>
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">حذف</span>
-                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="icon" className="h-8 w-8">
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">حذف</span>
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>آیا از حذف این کاربر مطمئن هستید؟</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                        این عمل کاربر را از پایگاه داده حذف می‌کند اما حساب احراز هویت او باقی می‌ماند. این عمل غیرقابل بازگشت است.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>انصراف</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteUser(u.id)}>
+                                        حذف
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         )}
                         {u.role !== 'student' && (<span className="text-xs text-muted-foreground">-</span>)}
