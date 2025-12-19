@@ -2,11 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ArrowRight, Trash2, UserPlus, RefreshCw } from 'lucide-react';
-import { collection, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { ArrowRight, Trash2, UserPlus } from 'lucide-react';
+import { collection, deleteDoc, doc } from 'firebase/firestore';
 
 import Header from '@/components/header';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import GlassCard from '@/components/glass-card';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,24 +30,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { User as AppUser } from '@/lib/types';
 
 
 type Role = 'student' | 'teacher';
 
-// This is a simple check to see if we're in an environment where server-side functions MIGHT be available.
-// In a real production environment, you might have a more robust way to check this.
-const isServerFunctionalityEnabled = !!process.env.NEXT_PUBLIC_ENABLE_ADMIN_FUNCTIONS || process.env.NODE_ENV !== 'production';
-
 export default function ManageUsersPage() {
   const router = useRouter();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const auth = useAuth();
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<Role | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
 
   // Fetch all users from Firestore only if the user is a teacher
   const usersCollection = useMemoFirebase(
@@ -83,13 +76,13 @@ export default function ManageUsersPage() {
         return;
     }
     
-    // Note: This only deletes the Firestore document, not the Auth user.
-    // A full user deletion would require a backend function (Firebase Cloud Function).
+    // Note: This only deletes the Firestore document. The Auth user remains.
+    // The user should manually delete them from the Firebase Console.
     try {
         await deleteDoc(doc(firestore, 'users', userId));
         toast({
             title: 'موفق',
-            description: 'کاربر با موفقیت از پایگاه داده حذف شد. برای حذف کامل از سیستم احراز هویت، از گزینه "حذف کاربران سرگردان" استفاده کنید.',
+            description: 'کاربر با موفقیت از پایگاه داده حذف شد. برای حذف کامل، او را از بخش Authentication کنسول فایربیس نیز حذف کنید.',
         });
     } catch(error) {
         console.error('Error deleting user:', error);
@@ -101,38 +94,6 @@ export default function ManageUsersPage() {
     }
   };
   
-  const handleDeleteOrphanedUsers = async () => {
-    setIsSyncing(true);
-    toast({ title: 'شروع عملیات...', description: 'در حال شناسایی و حذف کاربران سرگردان...' });
-    try {
-        const response = await fetch('/api/sync-users', {
-            method: 'POST',
-        });
-        
-        const result = await response.json();
-
-        if (!response.ok) {
-            // Use the specific error message from the API, or a fallback.
-            throw new Error(result.error || 'خطایی در سرور رخ داد.');
-        }
-
-        toast({
-            title: 'عملیات موفق',
-            description: result.message,
-        });
-
-    } catch (error: any) {
-        console.error('Failed to delete orphaned users:', error);
-        toast({
-            variant: 'destructive',
-            title: 'خطا در حذف کاربران سرگردان',
-            description: error.message || 'مشکلی در ارتباط با سرور پیش آمد.',
-        });
-    } finally {
-        setIsSyncing(false);
-    }
-};
-
   const getRoleBadgeVariant = (role: Role) => {
     switch (role) {
       case 'teacher':
@@ -154,52 +115,6 @@ export default function ManageUsersPage() {
         return 'نامشخص';
     }
   }
-  
-  const OrphanedUsersButton = () => {
-      const button = (
-         <Button variant="outline" size="sm" disabled={isSyncing || !isServerFunctionalityEnabled}>
-            {isSyncing ? <RefreshCw className="ml-2 h-4 w-4 animate-spin" /> : <Trash2 className="ml-2 h-4 w-4" />}
-            {isSyncing ? 'در حال پردازش...' : 'حذف کاربران سرگردان'}
-         </Button>
-      )
-
-      if (isServerFunctionalityEnabled) {
-          return (
-             <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    {button}
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>آیا از حذف کاربران سرگردان مطمئن هستید؟</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          این عمل تمام کاربرانی که در سیستم احراز هویت وجود دارند اما در پایگاه داده پروفایلی برایشان ثبت نشده را برای همیشه حذف می‌کند. این عمل غیرقابل بازگشت است.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>انصراف</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteOrphanedUsers} disabled={isSyncing}>
-                          بله، حذف کن
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-          )
-      }
-
-      return (
-         <Tooltip>
-            <TooltipTrigger asChild>
-                {/* A div is needed to wrap the disabled button for Tooltip to work */}
-                <div>{button}</div>
-            </TooltipTrigger>
-            <TooltipContent>
-                <p>برای فعالسازی، متغیر FIREBASE_SERVICE_ACCOUNT_KEY باید تنظیم شود.</p>
-            </TooltipContent>
-         </Tooltip>
-      )
-  }
-
 
   const isLoading = isUserLoading || (usersLoading && userRole === 'teacher');
 
@@ -233,7 +148,6 @@ export default function ManageUsersPage() {
                 <UserPlus className="ml-2 h-4 w-4" />
                 ایجاد کاربر جدید
             </Button>
-            <OrphanedUsersButton />
           </div>
         </div>
 
@@ -274,7 +188,7 @@ export default function ManageUsersPage() {
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>آیا از حذف این کاربر مطمئن هستید؟</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                        این عمل کاربر را فقط از پایگاه داده حذف می‌کند اما حساب احراز هویت او باقی می‌ماند. این عمل غیرقابل بازگشت است.
+                                        این عمل کاربر را فقط از پایگاه داده حذف می‌کند. برای حذف کامل، باید او را از بخش Authentication کنسول فایربیس نیز حذف کنید.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
