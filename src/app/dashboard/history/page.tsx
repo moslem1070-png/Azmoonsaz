@@ -7,28 +7,28 @@ import {
   CheckCircle,
   Percent,
 } from 'lucide-react';
+import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 
-import { history as mockHistory } from '@/lib/mock-data';
 import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
-import { getCompletedExams } from '@/lib/results-storage';
-import { HistoryItem } from '@/lib/types';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
-
-// Temporary mock exams to resolve build error until this page is connected to Firestore
-const exams = [
-    { id: '1', title: 'آزمون اطلاعات عمومی', questions: { length: 20 } },
-    { id: '2', title: 'آزمون علوم', questions: { length: 20 } },
-    { id: '3', title: 'آزمون تاریخ ایران', questions: { length: 25 } },
-    { id: '4', title: 'آزمون ریاضی', questions: { length: 15 } },
-];
+import type { HistoryItem, ExamResult, Exam } from '@/lib/types';
 
 
 export default function HistoryPage() {
   const router = useRouter();
-  const [history, setHistory] = useState<HistoryItem[]>([]);
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch the user's exam results
+  const examResultsCollection = useMemoFirebase(
+    () => (firestore && user ? collection(firestore, 'users', user.uid, 'examResults') : null),
+    [firestore, user]
+  );
+  const { data: examResults, isLoading: resultsLoading } = useCollection<ExamResult>(examResultsCollection);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -37,52 +37,44 @@ export default function HistoryPage() {
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
-    if (user) {
-      // This will only run on the client
-      const completed = getCompletedExams(user.uid);
+    const fetchHistoryDetails = async () => {
+      if (!examResults || !firestore) {
+        setIsLoading(resultsLoading);
+        return;
+      };
 
-      const newHistory: HistoryItem[] = Object.keys(completed)
-        .map((examId) => {
-          // We can't get the real exam details without Firestore yet.
-          // We'll use a placeholder title and assume a length for score calculation.
-          const exam = exams.find((e) => e.id === examId);
-          const title = exam?.title ?? `آزمون ${examId}`;
-          const totalQuestions = exam?.questions.length ?? 10; // Placeholder
+      setIsLoading(true);
+      const historyItems: HistoryItem[] = [];
 
-          const userAnswers = completed[examId];
-          let correctAnswers = 0;
-          
-          // Note: Correctness calculation is impossible without the actual questions.
-          // This part is just a placeholder. The score will be incorrect.
-          // We will fix this when we connect this page to firestore.
-          const score = Math.floor(Math.random() * 51) + 50; // Random score for now
+      for (const result of examResults) {
+        const examDocRef = doc(firestore, 'exams', result.examId);
+        const examDocSnap = await getDoc(examDocRef);
 
-          return {
-            id: `hist-${examId}`,
-            examId: examId,
-            title: title,
-            date: new Date().toLocaleDateString('fa-IR'), // This should be stored with the result
-            score: score,
-            correctAnswers: Math.round(score / 100 * totalQuestions),
-            totalQuestions: totalQuestions,
-            rank: Math.floor(Math.random() * 10) + 1, // Mock rank
-          };
-        })
-        .filter((item): item is HistoryItem => item !== null);
+        if (examDocSnap.exists()) {
+          const examData = examDocSnap.data() as Exam;
+          historyItems.push({
+            id: result.id,
+            examId: result.examId,
+            title: examData.title,
+            date: result.submissionTime.toDate().toLocaleDateString('fa-IR'),
+            score: result.scorePercentage,
+            correctAnswers: result.correctAnswers,
+            totalQuestions: result.totalQuestions,
+            // Rank is complex and requires fetching all results for an exam
+            // We'll omit it for now for performance.
+          });
+        }
+      }
 
-      // We combine mock history for demonstration, but only if it's not in the user's actual completed exams
-      const completedExamIds = new Set(Object.keys(completed));
-      const filteredMockHistory = mockHistory.filter(h => !completedExamIds.has(h.examId));
+      setHistory(historyItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      setIsLoading(false);
+    };
+
+    fetchHistoryDetails();
+  }, [examResults, firestore, resultsLoading]);
 
 
-      setHistory([...newHistory, ...filteredMockHistory].sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        )
-      );
-    }
-  }, [user]);
-
-  if (isUserLoading || !user) {
+  if (isUserLoading || isLoading) {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
   }
 
@@ -116,14 +108,16 @@ export default function HistoryPage() {
                         <CheckCircle className="w-4 h-4 text-green-400" /> پاسخ
                         صحیح
                       </span>
-                      <span className="font-semibold">{item.correctAnswers}</span>
+                      <span className="font-semibold">{item.correctAnswers} / {item.totalQuestions}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <TrendingUp className="w-4 h-4 text-accent" /> رتبه
-                      </span>
-                      <span className="font-semibold">{item.rank}</span>
-                    </div>
+                    {item.rank && (
+                        <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-2 text-muted-foreground">
+                            <TrendingUp className="w-4 h-4 text-accent" /> رتبه
+                        </span>
+                        <span className="font-semibold">{item.rank}</span>
+                        </div>
+                    )}
                   </div>
                   <Button
                     variant="outline"

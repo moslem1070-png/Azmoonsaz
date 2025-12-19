@@ -1,58 +1,112 @@
-// This is a simple client-side storage using localStorage.
-// In a real application, you would likely use a database.
+'use client';
 
-const RESULTS_KEY = 'examResults';
+import {
+  doc,
+  setDoc,
+  getDoc,
+  collection,
+  serverTimestamp,
+  type Firestore,
+} from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+import type { Exam, ExamResult } from './types';
 
-type Answers = Record<number, number>;
-// Structure for a single user's results: { [examId]: Answers }
-type UserResults = Record<string, Answers>;
-// Structure for all results: { [userId]: UserResults }
-type AllUsersResults = Record<string, UserResults>;
+// This file now uses Firestore instead of localStorage.
+
+type Answers = Record<string, string>; // { questionId: selectedOptionText }
+
+// We only need one instance of firestore, so we can initialize it once here.
+let firestore: Firestore;
+try {
+  firestore = initializeFirebase().firestore;
+} catch (e) {
+  console.error("Could not initialize Firestore in results-storage:", e);
+}
 
 
-const getAllUsersResults = (): AllUsersResults => {
-  if (typeof window === 'undefined') return {};
-  try {
-    const resultsJson = localStorage.getItem(RESULTS_KEY);
-    return resultsJson ? JSON.parse(resultsJson) : {};
-  } catch (error) {
-    console.error("Failed to get all results from localStorage", error);
-    return {};
+/**
+ * Calculates the score and saves the exam result to Firestore.
+ * @param userId - The ID of the user who took the exam.
+ * @param exam - The full exam object.
+ * @param userAnswers - A map of question IDs to the selected answer text.
+ */
+export const saveExamResult = async (userId: string, exam: Exam, userAnswers: Answers) => {
+  if (!firestore) {
+    throw new Error("Firestore is not initialized.");
   }
-};
+  if (!userId) {
+    throw new Error("User is not authenticated.");
+  }
 
-export const saveExamResult = (userId: string, examId: string, answers: Answers) => {
-  if (typeof window === 'undefined' || !userId) return;
-  try {
-    const allUsersResults = getAllUsersResults();
-    if (!allUsersResults[userId]) {
-      allUsersResults[userId] = {};
+  let correctAnswers = 0;
+  exam.questions.forEach(question => {
+    // Check if the user answered and if the answer is correct
+    if (userAnswers[question.id] && userAnswers[question.id] === question.correctAnswer) {
+      correctAnswers++;
     }
-    allUsersResults[userId][examId] = answers;
-    localStorage.setItem(RESULTS_KEY, JSON.stringify(allUsersResults));
-  } catch (error) {
-    console.error("Failed to save exam results to localStorage", error);
-  }
+  });
+
+  const totalQuestions = exam.questions.length;
+  const scorePercentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+
+  const resultData: Omit<ExamResult, 'id'> = {
+    examId: exam.id,
+    studentId: userId,
+    scorePercentage,
+    correctAnswers,
+    totalQuestions,
+    submissionTime: serverTimestamp(),
+    userAnswers,
+  };
+
+  // The result document ID will be the same as the exam ID for simplicity and to prevent re-takes.
+  const resultDocRef = doc(firestore, 'users', userId, 'examResults', exam.id);
+  
+  // Use a non-blocking write with error handling
+  setDoc(resultDocRef, resultData)
+    .catch((serverError) => {
+      console.error("Failed to save exam results to Firestore", serverError);
+      const permissionError = new FirestorePermissionError({
+        path: resultDocRef.path,
+        operation: 'create',
+        requestResourceData: resultData,
+      });
+      // Emit the error for global handling (e.g., showing a toast or dev overlay)
+      errorEmitter.emit('permission-error', permissionError);
+      // Re-throw to allow the calling function to know about the failure
+      throw serverError;
+    });
 };
 
-export const getExamResult = (userId: string, examId: string): Answers | null => {
-  if (typeof window === 'undefined' || !userId) return null;
-  try {
-    const userResults = getCompletedExams(userId);
-    return userResults[examId] || null;
-  } catch (error) {
-    console.error("Failed to get exam result from localStorage", error);
+/**
+ * Retrieves a specific exam result for a user from Firestore.
+ * @param userId - The ID of the user.
+ * @param examId - The ID of the exam.
+ * @returns The ExamResult object or null if not found.
+ */
+export const getExamResult = async (userId: string, examId: string): Promise<ExamResult | null> => {
+  if (!firestore) {
+    console.error("Firestore is not initialized.");
     return null;
   }
-};
+  if (!userId) {
+     console.error("User is not authenticated.");
+     return null;
+  }
 
-export const getCompletedExams = (userId: string): UserResults => {
-  if (typeof window === 'undefined' || !userId) return {};
   try {
-    const allUsersResults = getAllUsersResults();
-    return allUsersResults[userId] || {};
+    const resultDocRef = doc(firestore, 'users', userId, 'examResults', examId);
+    const docSnap = await getDoc(resultDocRef);
+
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as ExamResult;
+    } else {
+      return null;
+    }
   } catch (error) {
-    console.error("Failed to get completed exams from localStorage", error);
-    return {};
+    console.error("Failed to get exam result from Firestore", error);
+    return null;
   }
 };

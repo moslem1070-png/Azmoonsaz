@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Clock, FileQuestion, Lock } from "lucide-react";
+import { Clock, FileQuestion, Lock, Check } from "lucide-react";
 import { useState, useEffect } from 'react';
 
 import { Badge } from "@/components/ui/badge";
@@ -11,10 +11,9 @@ import Header from "@/components/header";
 import GlassCard from "@/components/glass-card";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
-import { getCompletedExams } from "@/lib/results-storage";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection } from 'firebase/firestore';
-import type { Exam } from '@/lib/types';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import type { Exam, ExamResult } from '@/lib/types';
 
 
 type Role = 'student' | 'teacher';
@@ -26,11 +25,20 @@ export default function DashboardPage() {
   const [userRole, setUserRole] = useState<Role | null>(null);
 
   const firestore = useFirestore();
+
+  // 1. Fetch all available exams
   const examsCollection = useMemoFirebase(
     () => (firestore ? collection(firestore, 'exams') : null),
     [firestore]
   );
   const { data: exams, isLoading: examsLoading } = useCollection<Exam>(examsCollection);
+
+  // 2. Fetch the user's results to know which exams are completed
+  const examResultsCollection = useMemoFirebase(
+    () => (firestore && user ? collection(firestore, 'users', user.uid, 'examResults') : null),
+    [firestore, user]
+  );
+  const { data: examResults, isLoading: resultsLoading } = useCollection<ExamResult>(examResultsCollection);
 
   useEffect(() => {
     // This will only run on the client side
@@ -44,13 +52,12 @@ export default function DashboardPage() {
     }
   }, [user, isUserLoading, router]);
 
+
   useEffect(() => {
-    // This will only run on the client
-    if (user) {
-      const completed = getCompletedExams(user.uid);
-      setCompletedExamIds(new Set(Object.keys(completed)));
+    if (examResults) {
+      setCompletedExamIds(new Set(examResults.map(result => result.examId)));
     }
-  }, [user]);
+  }, [examResults]);
 
   const getPlaceholderImage = (id: string) => {
     return PlaceHolderImages.find(img => img.id === id)?.imageUrl ?? 'https://picsum.photos/seed/1/600/400';
@@ -64,7 +71,7 @@ export default function DashboardPage() {
     }
   };
   
-  if (isUserLoading || !user || userRole === 'teacher' || examsLoading) {
+  if (isUserLoading || !user || userRole === 'teacher' || examsLoading || resultsLoading) {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
   }
 

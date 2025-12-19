@@ -3,25 +3,32 @@
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Clock, FileQuestion, Users, X, Check } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
+import { doc, getDoc, collection } from 'firebase/firestore';
 
-import { exams } from '@/lib/mock-data';
 import GlassCard from '@/components/glass-card';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getCompletedExams } from '@/lib/results-storage';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import type { Exam, ExamResult } from '@/lib/types';
+
 
 export default function ExamStartPage() {
   const params = useParams();
   const router = useRouter();
-  const { toast } = useToast();
-  const exam = exams.find((e) => e.id === params.id);
-  
-  const [isCompleted, setIsCompleted] = useState(false);
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const examId = Array.isArray(params.id) ? params.id[0] : params.id;
+
+  const examRef = useMemoFirebase(
+    () => (firestore && examId ? doc(firestore, 'exams', examId) : null),
+    [firestore, examId]
+  );
+  const { data: exam, isLoading: examLoading } = useDoc<Exam>(examRef);
+
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -30,13 +37,19 @@ export default function ExamStartPage() {
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
-    if (exam && user) {
-      const completed = getCompletedExams(user.uid);
-      if (completed[exam.id]) {
-        setIsCompleted(true);
-      }
+    const checkIfCompleted = async () => {
+        if (exam && user && firestore) {
+            const resultDocRef = doc(firestore, 'users', user.uid, 'examResults', exam.id);
+            const resultSnap = await getDoc(resultDocRef);
+            setIsCompleted(resultSnap.exists());
+        }
+        if(!examLoading) {
+            setLoading(false);
+        }
     }
-  }, [exam, user]);
+    checkIfCompleted();
+  }, [exam, user, firestore, examLoading]);
+
 
   const getPlaceholderImage = (id: string) => {
     return PlaceHolderImages.find((img) => img.id === id)?.imageUrl ?? 'https://picsum.photos/seed/1/600/400';
@@ -50,7 +63,7 @@ export default function ExamStartPage() {
     }
   };
 
-  if (isUserLoading || !user) {
+  if (isUserLoading || examLoading || loading) {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
   }
 
@@ -62,7 +75,7 @@ export default function ExamStartPage() {
     );
   }
   
-  const participants = Math.floor(Math.random() * 200) + 50; // Mock participants
+  const participants = Math.floor(Math.random() * 200) + 50; // Mock participants, can be replaced with real data later
 
   return (
     <div className="flex items-center justify-center min-h-screen p-4 bg-gradient-to-br from-[#302851] to-[#1A162E]">

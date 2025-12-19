@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from "next/image";
 import { ArrowLeft, ArrowRight, Check, Clock } from "lucide-react";
-import { exams } from '@/lib/mock-data';
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -13,21 +12,40 @@ import GlassCard from '@/components/glass-card';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
 import { saveExamResult } from '@/lib/results-storage';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { Exam } from '@/lib/types';
+
 
 export default function ExamPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useUser();
-  const exam = exams.find(e => e.id === params.id);
+  const firestore = useFirestore();
+  const examId = Array.isArray(params.id) ? params.id[0] : params.id;
+
+  const examRef = useMemoFirebase(
+    () => (firestore && examId ? doc(firestore, 'exams', examId) : null),
+    [firestore, examId]
+  );
+  const { data: exam, isLoading: examLoading } = useDoc<Exam>(examRef);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
-  const [timeLeft, setTimeLeft] = useState(exam ? exam.timeLimitMinutes * 60 : 0);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [isExamFinished, setIsExamFinished] = useState(false);
 
   useEffect(() => {
-    if (!exam) return;
+    if (exam && !isExamFinished) {
+        setTimeLeft(exam.timeLimitMinutes * 60);
+    }
+  }, [exam, isExamFinished]);
+
+
+  useEffect(() => {
+    if (isExamFinished || timeLeft <= 0) return;
+
     const timer = setInterval(() => {
       setTimeLeft(prevTime => {
         if (prevTime <= 1) {
@@ -38,9 +56,10 @@ export default function ExamPage() {
         return prevTime - 1;
       });
     }, 1000);
+
     return () => clearInterval(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exam]);
+  }, [timeLeft, isExamFinished]);
 
   const progressValue = useMemo(() => {
     if (!exam) return 0;
@@ -59,30 +78,41 @@ export default function ExamPage() {
     }
   };
 
-  const handleAnswerSelect = (questionId: number, optionIndex: number) => {
-    setSelectedAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
+  const handleAnswerSelect = (questionId: string, option: string) => {
+    setSelectedAnswers(prev => ({ ...prev, [questionId]: option }));
   };
 
-  const finishExam = () => {
-    if (!exam || !user) return;
-    saveExamResult(user.uid, exam.id, selectedAnswers);
-    toast({
-        title: "آزمون به پایان رسید",
-        description: "در حال محاسبه نتایج...",
-    });
-    router.push(`/exam/${exam.id}/results`);
+  const finishExam = async () => {
+    if (!exam || !user || isExamFinished) return;
+    setIsExamFinished(true); // Prevent multiple submissions
+    
+    try {
+        await saveExamResult(user.uid, exam, selectedAnswers);
+        toast({
+            title: "آزمون به پایان رسید",
+            description: "در حال محاسبه نتایج...",
+        });
+        router.push(`/exam/${exam.id}/results`);
+    } catch(error) {
+        toast({
+            variant: "destructive",
+            title: "خطا در ذخیره نتایج",
+            description: "مشکلی در ذخیره نتایج آزمون شما پیش آمد. لطفا دوباره تلاش کنید.",
+        });
+        setIsExamFinished(false); // Allow retry
+    }
   }
 
-  if (!exam) {
+  if (examLoading || !exam) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <h1 className="text-2xl">آزمون یافت نشد.</h1>
+        <h1 className="text-2xl">{examLoading ? 'در حال بارگذاری آزمون...' : 'آزمون یافت نشد.'}</h1>
       </div>
     );
   }
 
   const currentQuestion = exam.questions[currentQuestionIndex];
-  const placeholderImage = PlaceHolderImages.find(img => img.id === currentQuestion.imageId)?.imageUrl;
+  const placeholderImage = PlaceHolderImages.find(img => img.id === currentQuestion.imageURL)?.imageUrl;
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -118,16 +148,16 @@ export default function ExamPage() {
 
           <RadioGroup
             dir="rtl"
-            value={String(selectedAnswers[currentQuestion.id])}
-            onValueChange={(value) => handleAnswerSelect(currentQuestion.id, Number(value))}
+            value={selectedAnswers[currentQuestion.id]}
+            onValueChange={(value) => handleAnswerSelect(currentQuestion.id, value)}
             className="space-y-3 sm:space-y-4"
           >
             {currentQuestion.options.map((option, index) => (
               <GlassCard
                 key={index}
-                className={`flex items-center space-x-reverse space-x-3 p-3 sm:p-4 transition-all duration-300 ${selectedAnswers[currentQuestion.id] === index ? 'border-primary' : ''}`}
+                className={`flex items-center space-x-reverse space-x-3 p-3 sm:p-4 transition-all duration-300 ${selectedAnswers[currentQuestion.id] === option ? 'border-primary' : ''}`}
               >
-                <RadioGroupItem value={String(index)} id={`q${currentQuestion.id}-o${index}`} />
+                <RadioGroupItem value={option} id={`q${currentQuestion.id}-o${index}`} />
                 <Label htmlFor={`q${currentQuestion.id}-o${index}`} className="flex-1 text-sm sm:text-base cursor-pointer">
                   {option}
                 </Label>
@@ -144,9 +174,9 @@ export default function ExamPage() {
           </Button>
 
           {currentQuestionIndex === exam.questions.length - 1 ? (
-             <Button onClick={finishExam} className="bg-primary/80 hover:bg-primary gap-2">
+             <Button onClick={finishExam} disabled={isExamFinished} className="bg-primary/80 hover:bg-primary gap-2">
                 <Check className="w-4 h-4" />
-                <span>پایان</span>
+                <span>{isExamFinished ? 'در حال ارسال...' : 'پایان'}</span>
             </Button>
           ) : (
             <Button onClick={handleNext} className="gap-2">
