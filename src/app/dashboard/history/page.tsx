@@ -6,8 +6,10 @@ import {
   TrendingUp,
   CheckCircle,
   Percent,
+  Calendar,
+  BookOpen,
 } from 'lucide-react';
-import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc } from 'firebase/firestore';
 
 import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
@@ -46,27 +48,31 @@ export default function HistoryPage() {
       setIsLoading(true);
       const historyItems: HistoryItem[] = [];
 
-      for (const result of examResults) {
+      // Using Promise.all for parallel fetching
+      const promises = examResults.map(async (result) => {
         const examDocRef = doc(firestore, 'exams', result.examId);
         const examDocSnap = await getDoc(examDocRef);
 
         if (examDocSnap.exists()) {
           const examData = examDocSnap.data() as Exam;
-          historyItems.push({
+          return {
             id: result.id,
             examId: result.examId,
             title: examData.title,
-            date: result.submissionTime.toDate().toLocaleDateString('fa-IR'),
+            // Convert Firestore Timestamp to JS Date, then format it
+            date: result.submissionTime?.toDate ? result.submissionTime.toDate().toLocaleDateString('fa-IR') : 'تاریخ نامشخص',
             score: result.scorePercentage,
-            correctAnswers: result.correctAnswers,
-            totalQuestions: result.totalQuestions,
-            // Rank is complex and requires fetching all results for an exam
-            // We'll omit it for now for performance.
-          });
+            correctAnswers: result.correctness,
+            totalQuestions: examData.questions?.length || result.totalQuestions || 0, // Fallback
+          };
         }
-      }
+        return null;
+      });
 
-      setHistory(historyItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      const items = await Promise.all(promises);
+      const validItems = items.filter((item): item is HistoryItem => item !== null);
+
+      setHistory(validItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       setIsLoading(false);
     };
 
@@ -74,8 +80,17 @@ export default function HistoryPage() {
   }, [examResults, firestore, resultsLoading]);
 
 
-  if (isUserLoading || isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
+  const isLoadingCombined = isUserLoading || isLoading;
+
+  if (isLoadingCombined) {
+    return (
+        <div className="flex flex-col min-h-screen">
+          <Header />
+          <main className="container mx-auto px-4 py-8 flex-1">
+            <div className="flex items-center justify-center">در حال بارگذاری تاریخچه آزمون‌ها...</div>
+          </main>
+        </div>
+    );
   }
 
   return (
@@ -87,15 +102,25 @@ export default function HistoryPage() {
           {history.length === 0 ? (
             <GlassCard className="p-8 text-center">
               <p className="text-muted-foreground">شما هنوز در هیچ آزمونی شرکت نکرده‌اید.</p>
+              <Button onClick={() => router.push('/dashboard')} className="mt-4">
+                مشاهده آزمون‌های موجود
+              </Button>
             </GlassCard>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
               {history.map((item) => (
-                <GlassCard key={item.id} className="p-6 flex flex-col">
-                  <h3 className="text-lg font-bold mb-2">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    تاریخ: {item.date}
-                  </p>
+                <GlassCard key={item.id} className="p-6 flex flex-col transition-transform duration-300 hover:-translate-y-2">
+                  <h3 className="text-lg font-bold mb-2 text-right">{item.title}</h3>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+                     <p className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        {item.date}
+                     </p>
+                      <p className="flex items-center gap-2">
+                        <BookOpen className="w-4 h-4" />
+                        {item.totalQuestions} سوال
+                      </p>
+                  </div>
                   <div className="flex-1 space-y-3 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-2 text-muted-foreground">

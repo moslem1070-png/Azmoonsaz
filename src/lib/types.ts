@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase/firestore";
+
 export type Question = {
   id: string; // Changed from number to string for Firestore compatibility
   text: string;
@@ -11,8 +13,8 @@ export type Exam = {
   title: string;
   description: string;
   coverImageId: string;
-  difficulty: 'آسان' | 'متوسط' | 'سخت';
-  timeLimitMinutes: number;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  timer: number; // in minutes
   questions: Question[];
   teacherId: string; // To know who created the exam
 };
@@ -22,9 +24,9 @@ export type ExamResult = {
   examId: string;
   studentId: string;
   scorePercentage: number;
-  correctAnswers: number;
+  correctness: number; // Renamed from correctAnswers
   totalQuestions: number;
-  submissionTime: any; // Firestore Timestamp
+  submissionTime: Timestamp; // Firestore Timestamp
   userAnswers: Record<string, string>; // { questionId: selectedOption }
 };
 
@@ -39,8 +41,6 @@ export type HistoryItem = {
   totalQuestions: number;
   rank?: number; // Rank is complex, making it optional for now
 };
-
-export type UserRole = 'student' | 'teacher' | 'admin' | 'manager';
 
 // Represents a user document in Firestore
 export type User = {

@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Clock, FileQuestion, Lock, Check } from 'lucide-react';
+import { Clock, FileQuestion, CheckCircle, Trophy } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebas
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import type { Exam, ExamResult } from '@/lib/types';
 
-type Role = 'student' | 'teacher';
+type Role = 'student' | 'teacher' | 'manager';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -46,7 +46,7 @@ export default function DashboardPage() {
 
     if (!isUserLoading && !user) {
       router.push('/');
-    } else if (!isUserLoading && user && role === 'teacher') {
+    } else if (!isUserLoading && user && (role === 'teacher' || role === 'manager')) {
       router.push('/dashboard/teacher');
     }
   }, [user, isUserLoading, router]);
@@ -58,8 +58,14 @@ export default function DashboardPage() {
   }, [examResults]);
 
   const getPlaceholderImage = (id: string) => {
-    return PlaceHolderImages.find((img) => img.id === id)?.imageUrl ?? 'https://picsum.photos/seed/1/600/400';
+    const image = PlaceHolderImages.find((img) => img.id === id);
+    return image ? image.imageUrl : 'https://picsum.photos/seed/1/600/400';
   };
+
+  const getImageHint = (id: string) => {
+    const image = PlaceHolderImages.find((img) => img.id === id);
+    return image ? image.imageHint : 'quiz education';
+  }
 
   const handleStartExam = (examId: string, isCompleted: boolean) => {
     if (isCompleted) {
@@ -69,7 +75,9 @@ export default function DashboardPage() {
     }
   };
 
-  if (isUserLoading || !user || userRole === 'teacher' || examsLoading || resultsLoading) {
+  const isLoading = isUserLoading || examsLoading || resultsLoading;
+
+  if (isLoading || !user || userRole === 'teacher' || userRole === 'manager') {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
   }
 
@@ -83,44 +91,50 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
               {exams.map((exam) => {
                 const isCompleted = completedExamIds.has(exam.id);
+                const difficultyMap = {
+                    'Easy': 'آسان',
+                    'Medium': 'متوسط',
+                    'Hard': 'سخت',
+                };
+
                 return (
-                  <GlassCard key={exam.id} className="flex flex-col overflow-hidden">
+                  <GlassCard key={exam.id} className="flex flex-col overflow-hidden transition-transform duration-300 hover:-translate-y-2">
                     <div className="relative h-48 w-full">
                       <Image
                         src={getPlaceholderImage(exam.coverImageId)}
                         alt={exam.title}
                         fill
                         className="object-cover"
-                        data-ai-hint="quiz education"
+                        data-ai-hint={getImageHint(exam.coverImageId)}
                       />
-                      <div className="absolute inset-0 bg-black/30"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                       <Badge
-                        variant={exam.difficulty === 'آسان' ? 'secondary' : exam.difficulty === 'متوسط' ? 'default' : 'destructive'}
+                        variant={exam.difficulty === 'Easy' ? 'secondary' : exam.difficulty === 'Medium' ? 'default' : 'destructive'}
                         className="absolute top-3 left-3"
                       >
-                        {exam.difficulty}
+                        {difficultyMap[exam.difficulty] || exam.difficulty}
                       </Badge>
+                       <h2 className="absolute bottom-4 right-4 text-xl font-bold text-white">{exam.title}</h2>
                     </div>
                     <div className="p-6 flex flex-col flex-1">
-                      <h2 className="text-xl font-bold mb-4 flex-1">{exam.title}</h2>
                       <div className="flex justify-between items-center text-muted-foreground text-sm mb-6">
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-accent" />
-                          <span>{exam.timeLimitMinutes} دقیقه</span>
+                          <span>{exam.timer} دقیقه</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <FileQuestion className="w-4 h-4 text-accent" />
-                          <span>{exam.questions.length} سوال</span>
+                          <span>{exam.questions?.length || 0} سوال</span>
                         </div>
                       </div>
                       <Button
                         onClick={() => handleStartExam(exam.id, isCompleted)}
                         className={cn(
-                          'w-full transition-colors',
+                          'w-full transition-colors mt-auto',
                           isCompleted ? 'bg-green-600 hover:bg-green-700' : 'bg-primary/80 hover:bg-primary'
                         )}
                       >
-                        {isCompleted ? <Lock className="ml-2 h-4 w-4" /> : null}
+                        {isCompleted ? <Trophy className="ml-2 h-4 w-4" /> : <CheckCircle className="ml-2 h-4 w-4" />}
                         {isCompleted ? 'مشاهده نتایج' : 'شروع آزمون'}
                       </Button>
                     </div>

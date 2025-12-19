@@ -4,7 +4,6 @@ import {
   doc,
   setDoc,
   getDoc,
-  collection,
   serverTimestamp,
   type Firestore,
 } from 'firebase/firestore';
@@ -29,7 +28,7 @@ try {
 /**
  * Calculates the score and saves the exam result to Firestore.
  * @param userId - The ID of the user who took the exam.
- * @param exam - The full exam object.
+ * @param exam - The full exam object, including its questions.
  * @param userAnswers - A map of question IDs to the selected answer text.
  */
 export const saveExamResult = async (userId: string, exam: Exam, userAnswers: Answers) => {
@@ -39,23 +38,26 @@ export const saveExamResult = async (userId: string, exam: Exam, userAnswers: An
   if (!userId) {
     throw new Error("User is not authenticated.");
   }
+  if (!exam.questions) {
+    throw new Error("Exam object does not contain questions.");
+  }
 
-  let correctAnswers = 0;
+  let correctAnswersCount = 0;
   exam.questions.forEach(question => {
     // Check if the user answered and if the answer is correct
     if (userAnswers[question.id] && userAnswers[question.id] === question.correctAnswer) {
-      correctAnswers++;
+      correctAnswersCount++;
     }
   });
 
   const totalQuestions = exam.questions.length;
-  const scorePercentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+  const scorePercentage = totalQuestions > 0 ? Math.round((correctAnswersCount / totalQuestions) * 100) : 0;
 
   const resultData: Omit<ExamResult, 'id'> = {
     examId: exam.id,
     studentId: userId,
     scorePercentage,
-    correctAnswers,
+    correctness: correctAnswersCount, // Using the new field name from backend.json
     totalQuestions,
     submissionTime: serverTimestamp(),
     userAnswers,
@@ -65,7 +67,7 @@ export const saveExamResult = async (userId: string, exam: Exam, userAnswers: An
   const resultDocRef = doc(firestore, 'users', userId, 'examResults', exam.id);
   
   // Use a non-blocking write with error handling
-  setDoc(resultDocRef, resultData)
+  return setDoc(resultDocRef, resultData)
     .catch((serverError) => {
       console.error("Failed to save exam results to Firestore", serverError);
       const permissionError = new FirestorePermissionError({

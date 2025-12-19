@@ -1,13 +1,26 @@
 'use client';
 
-import Link from "next/link";
-import { BookOpen, User, LogOut, Edit, GraduationCap, Home, History, Briefcase, FilePlus, Settings, UserPlus, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
-import { useState, useEffect, type ReactNode } from "react";
+import Link from 'next/link';
+import {
+  BookOpen,
+  User,
+  LogOut,
+  Edit,
+  GraduationCap,
+  Home,
+  History,
+  Briefcase,
+  FilePlus,
+  Settings,
+  UserPlus,
+  Users,
+  LayoutDashboard,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { signOut } from 'firebase/auth';
+import { useState, useEffect, type ReactNode } from 'react';
 
-
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,9 +28,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useAuth, useUser } from "@/firebase";
-import { useToast } from "@/hooks/use-toast";
+  DropdownMenuGroup,
+} from '@/components/ui/dropdown-menu';
+import { useAuth, useUser } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 type Role = 'student' | 'teacher' | 'manager';
 
@@ -40,102 +55,117 @@ const Header = ({ children }: { children?: ReactNode }) => {
       localStorage.removeItem('userRole');
       router.push('/');
       toast({
-        title: "خروج موفق",
-        description: "شما با موفقیت از حساب خود خارج شدید."
+        title: 'خروج موفق',
+        description: 'شما با موفقیت از حساب خود خارج شدید.',
       });
     } catch (error) {
-      console.error("Error signing out: ", error);
+      console.error('Error signing out: ', error);
       toast({
-        variant: "destructive",
-        title: "خطا در خروج",
-        description: "هنگام خروج از حساب خطایی رخ داد.",
+        variant: 'destructive',
+        title: 'خطا در خروج',
+        description: 'هنگام خروج از حساب خطایی رخ داد.',
       });
     }
   };
-  
+
   const getAvatarIcon = () => {
     if (userRole === 'student') {
-        return <GraduationCap />;
+      return <GraduationCap className="w-5 h-5" />;
     }
     if (userRole === 'teacher' || userRole === 'manager') {
-        return <Briefcase />;
+      return <Briefcase className="w-5 h-5" />;
     }
-    return <User />;
-  }
+    return <User className="w-5 h-5" />;
+  };
 
   const getDashboardUrl = () => {
-      return (userRole === 'teacher' || userRole === 'manager') ? '/dashboard/teacher' : '/dashboard';
-  }
+    return userRole === 'student' ? '/dashboard' : '/dashboard/teacher';
+  };
 
   return (
     <header className="sticky top-0 z-50">
-        <div className="container mx-auto px-4">
-            <div className="mt-4 flex h-16 items-center justify-between rounded-[30px] border border-white/20 bg-white/10 px-4 sm:px-6 backdrop-blur-lg">
-                <div className="flex items-center gap-4">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="flex items-center gap-2 outline-none">
-                      <span className="text-white font-medium hidden sm:inline">{user?.displayName ?? 'کاربر'}</span>
-                      <Avatar>
-                          <AvatarFallback>
-                              {getAvatarIcon()}
-                          </AvatarFallback>
-                      </Avatar>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel className="sm:hidden">{user?.displayName}</DropdownMenuLabel>
-                      <DropdownMenuSeparator className="sm:hidden" />
-                      <DropdownMenuItem onClick={() => router.push(getDashboardUrl())}>
-                        <Home className="ml-2 h-4 w-4" />
-                        <span>صفحه اصلی</span>
+      <div className="container mx-auto px-4">
+        <div className="mt-4 flex h-16 items-center justify-between rounded-[30px] border border-white/10 bg-white/5 px-4 sm:px-6 backdrop-blur-xl shadow-lg">
+          <div className="flex items-center gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 outline-none p-1 rounded-full transition-colors hover:bg-white/10">
+                  <span className="text-white font-medium hidden sm:inline">
+                    {user?.displayName ?? 'کاربر'}
+                  </span>
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-primary/20 border border-primary/50 text-primary">
+                      {getAvatarIcon()}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 mt-2">
+                <DropdownMenuLabel className="font-normal text-right">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {user?.displayName}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user?.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => router.push(getDashboardUrl())}>
+                    <LayoutDashboard className="ml-2 h-4 w-4" />
+                    <span>داشبورد</span>
+                  </DropdownMenuItem>
+                  {userRole === 'student' ? (
+                    <DropdownMenuItem onClick={() => router.push('/dashboard/history')}>
+                      <History className="ml-2 h-4 w-4" />
+                      <span>کارنامه آزمون‌ها</span>
+                    </DropdownMenuItem>
+                  ) : (
+                    <>
+                      <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/create-exam')}>
+                        <FilePlus className="ml-2 h-4 w-4" />
+                        <span>ایجاد آزمون</span>
                       </DropdownMenuItem>
-                      {userRole === 'student' ? (
-                        <DropdownMenuItem onClick={() => router.push('/dashboard/history')}>
-                          <History className="ml-2 h-4 w-4" />
-                          <span>کارنامه آزمون‌ها</span>
-                        </DropdownMenuItem>
-                      ) : (
-                        <>
-                           <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/create-exam')}>
-                                <FilePlus className="ml-2 h-4 w-4" />
-                                <span>ایجاد آزمون جدید</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/manage-exams')}>
-                                <Settings className="ml-2 h-4 w-4" />
-                                <span>مدیریت آزمون‌ها</span>
-                            </DropdownMenuItem>
-                           {userRole === 'manager' && (
-                                <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/create-user')}>
-                                    <UserPlus className="ml-2 h-4 w-4" />
-                                    <span>ایجاد کاربر</span>
-                                </DropdownMenuItem>
-                           )}
-                           <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/manage-users')}>
-                                <Users className="ml-2 h-4 w-4" />
-                                <span>مدیریت کاربرها</span>
-                           </DropdownMenuItem>
-                        </>
-                      )}
-                      <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
-                        <Edit className="ml-2 h-4 w-4" />
-                        <span>ویرایش پروفایل</span>
+                      <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/manage-exams')}>
+                        <Settings className="ml-2 h-4 w-4" />
+                        <span>مدیریت آزمون‌ها</span>
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout}>
-                        <LogOut className="ml-2 h-4 w-4" />
-                        <span>خروج</span>
+                      <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/manage-users')}>
+                        <Users className="ml-2 h-4 w-4" />
+                        <span>مدیریت کاربران</span>
                       </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                   {children}
-                </div>
-                <Link href={getDashboardUrl()} className="flex items-center gap-3">
-                    <h1 className="hidden sm:block text-lg sm:text-xl font-bold text-white">Persian QuizMaster</h1>
-                    <div className="p-2 bg-primary/80 rounded-lg">
-                        <BookOpen className="h-6 w-6 text-primary-foreground" />
-                    </div>
-                </Link>
+                    </>
+                  )}
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
+                  <Edit className="ml-2 h-4 w-4" />
+                  <span>ویرایش پروفایل</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500 focus:bg-red-500/10">
+                  <LogOut className="ml-2 h-4 w-4" />
+                  <span>خروج</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {children}
+          </div>
+          <Link
+            href={getDashboardUrl()}
+            className="flex items-center gap-3 group"
+          >
+            <h1 className="hidden sm:block text-lg sm:text-xl font-bold text-white group-hover:text-primary transition-colors">
+              Persian QuizMaster
+            </h1>
+            <div className="p-2 bg-primary/80 rounded-lg group-hover:scale-110 transition-transform">
+              <BookOpen className="h-6 w-6 text-primary-foreground" />
             </div>
+          </Link>
         </div>
+      </div>
     </header>
   );
 };
