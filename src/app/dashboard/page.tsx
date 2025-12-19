@@ -15,17 +15,25 @@ import { cn } from "@/lib/utils";
 import { getCompletedExams } from "@/lib/results-storage";
 import { useUser } from "@/firebase";
 
+type Role = 'student' | 'teacher';
+
 export default function DashboardPage() {
   const router = useRouter();
   const [completedExamIds, setCompletedExamIds] = useState<Set<string>>(new Set());
   const { user, isUserLoading } = useUser();
+  const [userRole, setUserRole] = useState<Role | null>(null);
 
   useEffect(() => {
+    // This will only run on the client side
+    const role = localStorage.getItem('userRole') as Role;
+    setUserRole(role);
+
     if (!isUserLoading && !user) {
       router.push('/');
+    } else if (!isUserLoading && user && role === 'teacher') {
+      router.push('/dashboard/teacher');
     }
   }, [user, isUserLoading, router]);
-
 
   useEffect(() => {
     // This will only run on the client
@@ -47,7 +55,7 @@ export default function DashboardPage() {
     }
   };
   
-  if (isUserLoading || !user) {
+  if (isUserLoading || !user || userRole === 'teacher') {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
   }
 

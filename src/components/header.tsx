@@ -60,6 +60,10 @@ const Header = ({ children }: { children?: ReactNode }) => {
     return <User />;
   }
 
+  const getDashboardUrl = () => {
+      return userRole === 'teacher' ? '/dashboard/teacher' : '/dashboard';
+  }
+
   return (
     <header className="sticky top-0 z-50">
         <div className="container mx-auto px-4">
@@ -77,7 +81,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
                     <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuLabel>{user?.displayName}</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                      <DropdownMenuItem onClick={() => router.push(getDashboardUrl())}>
                         <Home className="ml-2 h-4 w-4" />
                         <span>صفحه اصلی</span>
                       </DropdownMenuItem>
@@ -98,7 +102,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
                   </DropdownMenu>
                    {children}
                 </div>
-                <Link href="/dashboard" className="flex items-center gap-3">
+                <Link href={getDashboardUrl()} className="flex items-center gap-3">
                     <h1 className="text-xl font-bold text-white hidden sm:block">Persian QuizMaster</h1>
                     <div className="p-2 bg-primary/80 rounded-lg">
                         <BookOpen className="h-6 w-6 text-primary-foreground" />

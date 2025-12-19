@@ -35,16 +35,20 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // If user is already logged in, redirect to dashboard
+    // If user is already logged in, redirect based on role
     if (!isUserLoading && user) {
-      router.push('/dashboard');
+      const role = localStorage.getItem('userRole') as Role;
+      if (role === 'teacher') {
+        router.push('/dashboard/teacher');
+      } else {
+        router.push('/dashboard');
+      }
     }
   }, [user, isUserLoading, router]);
 
 
   const handleRoleChange = (role: Role) => {
     setSelectedRole(role);
-    // If teacher is selected, only login is available now that the first admin is created
     if (role === 'teacher') {
       setAuthMode('login');
     }
@@ -63,7 +67,14 @@ export default function LoginPage() {
     const email = createEmailFromNationalId(nationalId);
 
     try {
+      let userCredential;
       if (authMode === 'signup') {
+        if (selectedRole === 'teacher') {
+           toast({ variant: 'destructive', title: 'خطا', description: 'ثبت‌نام برای مدیران امکان‌پذیر نیست.' });
+           setLoading(false);
+           return;
+        }
+
         if (password !== confirmPassword) {
           toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور و تکرار آن یکسان نیستند.' });
           setLoading(false);
@@ -75,25 +86,28 @@ export default function LoginPage() {
             return;
         }
 
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
-        // Update user profile with full name
         await updateProfile(userCredential.user, {
             displayName: fullName,
         });
 
-        localStorage.setItem('userRole', selectedRole);
         toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
-        router.push('/dashboard');
 
       } else { // Login mode
-        await signInWithEmailAndPassword(auth, email, password);
-        localStorage.setItem('userRole', selectedRole);
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
         toast({ title: 'ورود موفق', description: 'خوش آمدید!' });
+      }
+
+      localStorage.setItem('userRole', selectedRole);
+
+      if (selectedRole === 'teacher') {
+        router.push('/dashboard/teacher');
+      } else {
         router.push('/dashboard');
       }
-    } catch (error: any)
-{
+
+    } catch (error: any) {
       console.error(error);
       const errorMessage =
         error.code === 'auth/user-not-found' ? 'کاربری با این کد ملی یافت نشد.' :
