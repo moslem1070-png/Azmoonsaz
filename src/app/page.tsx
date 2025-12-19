@@ -44,6 +44,10 @@ export default function LoginPage() {
 
   const handleRoleChange = (role: Role) => {
     setSelectedRole(role);
+    // If teacher is selected, only login is available
+    if (role === 'teacher') {
+      setAuthMode('login');
+    }
   };
 
   const handleAuthSubmission = async (e: React.FormEvent) => {
@@ -71,6 +75,12 @@ export default function LoginPage() {
             return;
         }
         
+        // Signup is only for students now
+        if (selectedRole === 'teacher') {
+            toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت‌نام برای مدیر وجود ندارد.' });
+            setLoading(false);
+            return;
+        }
 
         await createUserWithEmailAndPassword(auth, email, password);
         toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
@@ -96,7 +106,7 @@ export default function LoginPage() {
   
   const getTitle = () => {
     if (selectedRole === 'teacher') {
-      return authMode === 'login' ? 'ورود مدیر / معلم' : 'ثبت‌نام مدیر / معلم';
+        return 'ورود مدیر / معلم';
     }
     if (authMode === 'login') return 'ورود دانش‌آموز';
     return 'ثبت‌نام دانش‌آموز';
@@ -213,29 +223,31 @@ export default function LoginPage() {
           </motion.div>
         </AnimatePresence>
 
-        <div className="flex items-center justify-center space-x-reverse space-x-2">
-            <Button
-              variant={authMode === 'login' ? 'ghost' : 'link'}
-              onClick={() => setAuthMode('login')}
-              className={cn(
-                'text-muted-foreground transition-colors',
-                authMode === 'login' && 'font-bold text-accent'
-              )}
-            >
-              ورود
-            </Button>
-            <div className="h-4 w-px bg-border"></div>
-            <Button
-              variant={authMode === 'signup' ? 'ghost' : 'link'}
-              onClick={() => setAuthMode('signup')}
-              className={cn(
-                'text-muted-foreground transition-colors',
-                authMode === 'signup' && 'font-bold text-accent'
-              )}
-            >
-              ثبت‌نام
-            </Button>
-        </div>
+        {selectedRole === 'student' && (
+          <div className="flex items-center justify-center space-x-reverse space-x-2">
+              <Button
+                variant={authMode === 'login' ? 'ghost' : 'link'}
+                onClick={() => setAuthMode('login')}
+                className={cn(
+                  'text-muted-foreground transition-colors',
+                  authMode === 'login' && 'font-bold text-accent'
+                )}
+              >
+                ورود
+              </Button>
+              <div className="h-4 w-px bg-border"></div>
+              <Button
+                variant={authMode === 'signup' ? 'ghost' : 'link'}
+                onClick={() => setAuthMode('signup')}
+                className={cn(
+                  'text-muted-foreground transition-colors',
+                  authMode === 'signup' && 'font-bold text-accent'
+                )}
+              >
+                ثبت‌نام
+              </Button>
+          </div>
+        )}
       </GlassCard>
     </div>
   );
