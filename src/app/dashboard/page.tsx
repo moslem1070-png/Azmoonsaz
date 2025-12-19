@@ -29,17 +29,22 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // This will only run on the client
-    const completed = getCompletedExams();
-    setCompletedExamIds(new Set(Object.keys(completed)));
-  }, []);
+    if (user) {
+      const completed = getCompletedExams(user.uid);
+      setCompletedExamIds(new Set(Object.keys(completed)));
+    }
+  }, [user]);
 
   const getPlaceholderImage = (id: string) => {
     return PlaceHolderImages.find(img => img.id === id)?.imageUrl ?? 'https://picsum.photos/seed/1/600/400';
   }
 
-  const handleStartExam = (examId: string) => {
-    // Navigate to the pre-exam start page
-    router.push(`/exam/${examId}/start`);
+  const handleStartExam = (examId: string, isCompleted: boolean) => {
+    if (isCompleted) {
+      router.push(`/exam/${examId}/results`);
+    } else {
+      router.push(`/exam/${examId}/start`);
+    }
   };
   
   if (isUserLoading || !user) {
@@ -86,12 +91,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <Button
-                    onClick={() => handleStartExam(exam.id)}
+                    onClick={() => handleStartExam(exam.id, isCompleted)}
                     className={cn(
                       "w-full transition-colors",
-                      isCompleted ? "bg-gray-500 hover:bg-gray-600 cursor-not-allowed" : "bg-primary/80 hover:bg-primary"
+                      isCompleted ? "bg-green-600 hover:bg-green-700" : "bg-primary/80 hover:bg-primary"
                     )}
-                    disabled={isCompleted}
                   >
                     {isCompleted ? <Lock className="ml-2 h-4 w-4" /> : null}
                     {isCompleted ? "مشاهده نتایج" : "شروع آزمون"}

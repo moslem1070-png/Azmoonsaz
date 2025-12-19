@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 
 export default function HistoryPage() {
   const router = useRouter();
-  const [history, setHistory] = useState<HistoryItem[]>(mockHistory);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const { user, isUserLoading } = useUser();
 
   useEffect(() => {
@@ -28,46 +28,52 @@ export default function HistoryPage() {
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
-    // This will only run on the client
-    const completed = getCompletedExams();
+    if (user) {
+      // This will only run on the client
+      const completed = getCompletedExams(user.uid);
 
-    const newHistory: HistoryItem[] = Object.keys(completed)
-      .map((examId) => {
-        const exam = exams.find((e) => e.id === examId);
-        if (!exam) return null;
+      const newHistory: HistoryItem[] = Object.keys(completed)
+        .map((examId) => {
+          const exam = exams.find((e) => e.id === examId);
+          if (!exam) return null;
 
-        const userAnswers = completed[examId];
-        let correctAnswers = 0;
-        const totalQuestions = exam.questions.length;
-        exam.questions.forEach((q) => {
-          if (userAnswers[q.id] === q.correctAnswerIndex) {
-            correctAnswers++;
-          }
-        });
-        const score =
-          totalQuestions > 0
-            ? Math.round((correctAnswers / totalQuestions) * 100)
-            : 0;
+          const userAnswers = completed[examId];
+          let correctAnswers = 0;
+          const totalQuestions = exam.questions.length;
+          exam.questions.forEach((q) => {
+            if (userAnswers[q.id] === q.correctAnswerIndex) {
+              correctAnswers++;
+            }
+          });
+          const score =
+            totalQuestions > 0
+              ? Math.round((correctAnswers / totalQuestions) * 100)
+              : 0;
 
-        return {
-          id: `hist-${examId}`,
-          examId: examId,
-          title: exam.title,
-          date: new Date().toLocaleDateString('fa-IR'),
-          score: score,
-          correctAnswers: correctAnswers,
-          totalQuestions: totalQuestions,
-          rank: Math.floor(Math.random() * 10) + 1, // Mock rank
-        };
-      })
-      .filter((item): item is HistoryItem => item !== null);
+          return {
+            id: `hist-${examId}`,
+            examId: examId,
+            title: exam.title,
+            date: new Date().toLocaleDateString('fa-IR'), // This should be stored with the result
+            score: score,
+            correctAnswers: correctAnswers,
+            totalQuestions: totalQuestions,
+            rank: Math.floor(Math.random() * 10) + 1, // Mock rank
+          };
+        })
+        .filter((item): item is HistoryItem => item !== null);
 
-    setHistory((prev) =>
-      [...newHistory, ...prev.filter((h) => !completed[h.examId])].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      )
-    );
-  }, []);
+      // We combine mock history for demonstration, but only if it's not in the user's actual completed exams
+      const completedExamIds = new Set(Object.keys(completed));
+      const filteredMockHistory = mockHistory.filter(h => !completedExamIds.has(h.examId));
+
+
+      setHistory([...newHistory, ...filteredMockHistory].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      );
+    }
+  }, [user]);
 
   if (isUserLoading || !user) {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;

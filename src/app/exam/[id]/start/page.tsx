@@ -30,13 +30,13 @@ export default function ExamStartPage() {
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
-    if (exam) {
-      const completed = getCompletedExams();
+    if (exam && user) {
+      const completed = getCompletedExams(user.uid);
       if (completed[exam.id]) {
         setIsCompleted(true);
       }
     }
-  }, [exam]);
+  }, [exam, user]);
 
   const getPlaceholderImage = (id: string) => {
     return PlaceHolderImages.find((img) => img.id === id)?.imageUrl ?? 'https://picsum.photos/seed/1/600/400';
@@ -119,9 +119,9 @@ export default function ExamStartPage() {
                     <X className="w-5 h-5 ml-2" />
                     انصراف
                  </Button>
-                 <Button size="lg" className="w-1/2 bg-primary/80 hover:bg-primary" onClick={handleStart} disabled={isCompleted}>
-                     {isCompleted ? "تکمیل شده" : "شروع آزمون"}
-                    {!isCompleted && <Check className="w-5 h-5 mr-2" />}
+                 <Button size="lg" className="w-1/2 bg-primary/80 hover:bg-primary" onClick={handleStart}>
+                     {isCompleted ? "مشاهده نتایج" : "شروع آزمون"}
+                    {isCompleted ? null : <Check className="w-5 h-5 mr-2" />}
                  </Button>
             </div>
         </div>

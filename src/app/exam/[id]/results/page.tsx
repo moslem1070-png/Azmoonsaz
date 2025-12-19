@@ -17,6 +17,7 @@ import { exams } from "@/lib/mock-data";
 import GlassCard from "@/components/glass-card";
 import { Button } from "@/components/ui/button";
 import { getExamResult } from "@/lib/results-storage";
+import { useUser } from "@/firebase";
 
 type Results = {
   score: number;
@@ -29,13 +30,14 @@ type Results = {
 export default function ResultsPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useUser();
   const exam = exams.find((e) => e.id === params.id);
   const [results, setResults] = useState<Results | null>(null);
 
   useEffect(() => {
-    if (!exam) return;
+    if (!exam || !user) return;
 
-    const savedResult = getExamResult(exam.id);
+    const savedResult = getExamResult(user.uid, exam.id);
     if (savedResult) {
       let correct = 0;
       let incorrect = 0;
@@ -57,7 +59,7 @@ export default function ResultsPage() {
       
       setResults({ score, correct, incorrect, unanswered, total });
     }
-  }, [exam]);
+  }, [exam, user]);
 
   const data = useMemo(() => {
     if (!results) return [];
@@ -166,7 +168,7 @@ export default function ResultsPage() {
 
 
         <div className="mt-12">
-          <Button onClick={() => router.push("/")} className="gap-2 px-8">
+          <Button onClick={() => router.push("/dashboard")} className="gap-2 px-8">
             <Home className="w-4 h-4" />
             <span>بازگشت به داشبورد</span>
           </Button>

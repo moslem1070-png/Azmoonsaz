@@ -13,11 +13,13 @@ import GlassCard from '@/components/glass-card';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
 import { saveExamResult } from '@/lib/results-storage';
+import { useUser } from '@/firebase';
 
 export default function ExamPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useUser();
   const exam = exams.find(e => e.id === params.id);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -61,8 +63,8 @@ export default function ExamPage() {
   };
 
   const finishExam = () => {
-    if (!exam) return;
-    saveExamResult(exam.id, selectedAnswers);
+    if (!exam || !user) return;
+    saveExamResult(user.uid, exam.id, selectedAnswers);
     toast({
         title: "آزمون به پایان رسید",
         description: "در حال محاسبه نتایج...",
