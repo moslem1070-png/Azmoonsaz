@@ -123,15 +123,16 @@ export default function LoginPage() {
     setLoading(true);
     const { nationalId, password, fullName } = data;
 
+    // --- SIGNUP LOGIC ---
     if (authMode === 'signup') {
-      // --- SIGNUP LOGIC ---
-      if (selectedRole === 'teacher') {
-        toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت‌نام معلم از این طریق وجود ندارد.' });
-        setLoading(false);
-        return;
-      }
-
       const email = createEmail(nationalId, selectedRole);
+
+      // Double-check to prevent teacher signup via form manipulation
+      if (selectedRole === 'teacher') {
+          toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت‌نام معلم از این طریق وجود ندارد.' });
+          setLoading(false);
+          return;
+      }
       
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -146,7 +147,7 @@ export default function LoginPage() {
           nationalId: nationalId,
           firstName: fullName.split(' ')[0] || '',
           lastName: fullName.split(' ').slice(1).join(' ') || '',
-          role: 'student', // Hardcode role to student on public signup
+          role: selectedRole,
         };
         
         setDoc(userDocRef, newUserDoc).catch(serverError => {
@@ -206,6 +207,10 @@ export default function LoginPage() {
   
   const getTitle = () => {
     const roleText = selectedRole === 'teacher' ? 'معلم' : 'دانش‌آموز';
+    // If teacher is selected, always show login title
+    if (selectedRole === 'teacher') {
+        return 'ورود معلم';
+    }
     return authMode === 'login' ? `ورود ${roleText}` : `ثبت‌نام ${roleText}`;
   };
 
@@ -225,7 +230,8 @@ export default function LoginPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-2">{getTitle()}</h1>
           <p className="text-muted-foreground">
-            {authMode === 'login' ? 'برای ادامه وارد شوید.' : 'برای ساخت حساب کاربری، فرم زیر را تکمیل کنید.'}
+             {selectedRole === 'teacher' ? 'معلمان فقط می‌توانند وارد شوند.' : 
+              authMode === 'login' ? 'برای ادامه وارد شوید.' : 'برای ساخت حساب کاربری، فرم زیر را تکمیل کنید.'}
           </p>
         </div>
 
@@ -364,30 +370,32 @@ export default function LoginPage() {
             </Form>
           </motion.div>
         </AnimatePresence>
-
-        <div className="flex items-center justify-center space-x-reverse space-x-2">
-            <Button
-            variant="link"
-            onClick={() => setAuthMode('login')}
-            className={cn(
-                'text-muted-foreground transition-colors',
-                authMode === 'login' && 'font-bold text-accent'
-            )}
-            >
-            ورود
-            </Button>
-            <div className="h-4 w-px bg-border"></div>
-            <Button
-            variant="link"
-            onClick={() => setAuthMode('signup')}
-            className={cn(
-                'text-muted-foreground transition-colors',
-                authMode === 'signup' && 'font-bold text-accent'
-            )}
-            >
-            ثبت‌نام
-            </Button>
-        </div>
+        
+        {selectedRole === 'student' && (
+             <div className="flex items-center justify-center space-x-reverse space-x-2">
+                <Button
+                variant="link"
+                onClick={() => setAuthMode('login')}
+                className={cn(
+                    'text-muted-foreground transition-colors',
+                    authMode === 'login' && 'font-bold text-accent'
+                )}
+                >
+                ورود
+                </Button>
+                <div className="h-4 w-px bg-border"></div>
+                <Button
+                variant="link"
+                onClick={() => setAuthMode('signup')}
+                className={cn(
+                    'text-muted-foreground transition-colors',
+                    authMode === 'signup' && 'font-bold text-accent'
+                )}
+                >
+                ثبت‌نام
+                </Button>
+            </div>
+        )}
 
       </GlassCard>
     </div>
