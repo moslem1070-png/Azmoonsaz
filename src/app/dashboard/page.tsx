@@ -7,13 +7,15 @@ import { useState, useEffect } from 'react';
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { exams } from "@/lib/mock-data";
 import Header from "@/components/header";
 import GlassCard from "@/components/glass-card";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
 import { getCompletedExams } from "@/lib/results-storage";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection } from 'firebase/firestore';
+import type { Exam } from '@/lib/types';
+
 
 type Role = 'student' | 'teacher';
 
@@ -22,6 +24,13 @@ export default function DashboardPage() {
   const [completedExamIds, setCompletedExamIds] = useState<Set<string>>(new Set());
   const { user, isUserLoading } = useUser();
   const [userRole, setUserRole] = useState<Role | null>(null);
+
+  const firestore = useFirestore();
+  const examsCollection = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'exams') : null),
+    [firestore]
+  );
+  const { data: exams, isLoading: examsLoading } = useCollection<Exam>(examsCollection);
 
   useEffect(() => {
     // This will only run on the client side
@@ -55,7 +64,7 @@ export default function DashboardPage() {
     }
   };
   
-  if (isUserLoading || !user || userRole === 'teacher') {
+  if (isUserLoading || !user || userRole === 'teacher' || examsLoading) {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
   }
 
@@ -65,53 +74,59 @@ export default function DashboardPage() {
       <main className="container mx-auto px-4 py-8 flex-1">
         <section id="available-exams">
           <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-right">آزمون‌های موجود</h1>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {exams.map((exam) => {
-              const isCompleted = completedExamIds.has(exam.id);
-              return (
-              <GlassCard key={exam.id} className="flex flex-col overflow-hidden">
-                <div className="relative h-48 w-full">
-                  <Image
-                    src={getPlaceholderImage(exam.coverImageId)}
-                    alt={exam.title}
-                    fill
-                    className="object-cover"
-                    data-ai-hint="quiz education"
-                  />
-                  <div className="absolute inset-0 bg-black/30"></div>
-                   <Badge
-                    variant={exam.difficulty === 'آسان' ? 'secondary' : exam.difficulty === 'متوسط' ? 'default' : 'destructive'}
-                    className="absolute top-3 left-3"
-                  >
-                    {exam.difficulty}
-                  </Badge>
-                </div>
-                <div className="p-6 flex flex-col flex-1">
-                  <h2 className="text-xl font-bold mb-4 flex-1">{exam.title}</h2>
-                  <div className="flex justify-between items-center text-muted-foreground text-sm mb-6">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-accent" />
-                      <span>{exam.timeLimitMinutes} دقیقه</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FileQuestion className="w-4 h-4 text-accent" />
-                      <span>{exam.questions.length} سوال</span>
-                    </div>
+          {exams && exams.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {exams.map((exam) => {
+                const isCompleted = completedExamIds.has(exam.id);
+                return (
+                <GlassCard key={exam.id} className="flex flex-col overflow-hidden">
+                  <div className="relative h-48 w-full">
+                    <Image
+                      src={getPlaceholderImage(exam.coverImageId)}
+                      alt={exam.title}
+                      fill
+                      className="object-cover"
+                      data-ai-hint="quiz education"
+                    />
+                    <div className="absolute inset-0 bg-black/30"></div>
+                     <Badge
+                      variant={exam.difficulty === 'آسان' ? 'secondary' : exam.difficulty === 'متوسط' ? 'default' : 'destructive'}
+                      className="absolute top-3 left-3"
+                    >
+                      {exam.difficulty}
+                    </Badge>
                   </div>
-                  <Button
-                    onClick={() => handleStartExam(exam.id, isCompleted)}
-                    className={cn(
-                      "w-full transition-colors",
-                      isCompleted ? "bg-green-600 hover:bg-green-700" : "bg-primary/80 hover:bg-primary"
-                    )}
-                  >
-                    {isCompleted ? <Lock className="ml-2 h-4 w-4" /> : null}
-                    {isCompleted ? "مشاهده نتایج" : "شروع آزمون"}
-                  </Button>
-                </div>
-              </GlassCard>
-            )})}
-          </div>
+                  <div className="p-6 flex flex-col flex-1">
+                    <h2 className="text-xl font-bold mb-4 flex-1">{exam.title}</h2>
+                    <div className="flex justify-between items-center text-muted-foreground text-sm mb-6">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-accent" />
+                        <span>{exam.timeLimitMinutes} دقیقه</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <FileQuestion className="w-4 h-4 text-accent" />
+                        <span>{exam.questions.length} سوال</span>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => handleStartExam(exam.id, isCompleted)}
+                      className={cn(
+                        "w-full transition-colors",
+                        isCompleted ? "bg-green-600 hover:bg-green-700" : "bg-primary/80 hover:bg-primary"
+                      )}
+                    >
+                      {isCompleted ? <Lock className="ml-2 h-4 w-4" /> : null}
+                      {isCompleted ? "مشاهده نتایج" : "شروع آزمون"}
+                    </Button>
+                  </div>
+                </GlassCard>
+              )})}
+            </div>
+          ) : (
+             <GlassCard className="p-8 text-center">
+              <p className="text-muted-foreground">در حال حاضر هیچ آزمونی برای نمایش وجود ندارد.</p>
+            </GlassCard>
+          )}
         </section>
       </main>
     </div>
