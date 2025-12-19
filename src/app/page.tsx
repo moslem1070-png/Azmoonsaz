@@ -4,16 +4,19 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Briefcase, Key, ArrowRight, UserPlus, Fingerprint } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { doc, setDoc } from 'firebase/firestore';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import GlassCard from '@/components/glass-card';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 type Role = 'student' | 'teacher';
 type TeacherSubRole = 'manager' | 'teacher';
@@ -38,6 +41,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
@@ -81,7 +85,6 @@ export default function LoginPage() {
     setFullName('');
   };
   
-
   const handleAuthSubmission = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -98,33 +101,60 @@ export default function LoginPage() {
         return;
     }
 
-    try {
-      if (authMode === 'signup') {
-        // --- SIGNUP LOGIC ---
-        if (passwordError) {
-            toast({ variant: 'destructive', title: 'خطا', description: passwordError });
-            setLoading(false);
-            return;
-        }
-        if (password !== confirmPassword) {
-          toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور و تکرار آن یکسان نیستند.' });
+    if (authMode === 'signup') {
+      // --- SIGNUP LOGIC ---
+      if (passwordError) {
+          toast({ variant: 'destructive', title: 'خطا', description: passwordError });
           setLoading(false);
           return;
-        }
-        if (!fullName) {
-            toast({ variant: 'destructive', title: 'خطا', description: 'نام و نام خانوادگی الزامی است.' });
-            setLoading(false);
-            return;
-        }
+      }
+      if (password !== confirmPassword) {
+        toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور و تکرار آن یکسان نیستند.' });
+        setLoading(false);
+        return;
+      }
+      if (!fullName) {
+          toast({ variant: 'destructive', title: 'خطا', description: 'نام و نام خانوادگی الزامی است.' });
+          setLoading(false);
+          return;
+      }
 
-        const email = createEmailFromNationalId(nationalId, selectedRole, selectedRole === 'teacher' ? teacherSubRole : undefined);
+      const effectiveRole = selectedRole === 'teacher' ? teacherSubRole : selectedRole;
+      const email = createEmailFromNationalId(nationalId, selectedRole, selectedRole === 'teacher' ? teacherSubRole : undefined);
+      
+      try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
         
-        await updateProfile(userCredential.user, { displayName: fullName });
+        await updateProfile(user, { displayName: fullName });
+
+        // Also create a user document in Firestore
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const newUserDoc = {
+          id: user.uid,
+          displayName: fullName,
+          email: user.email,
+          role: effectiveRole,
+        };
+        
+        setDoc(userDocRef, newUserDoc).catch(serverError => {
+            console.error("Firestore user creation failed:", serverError);
+            // This is a background error, but we can still inform the user
+            toast({
+                variant: 'destructive',
+                title: 'خطای پایگاه داده',
+                description: 'حساب کاربری شما ایجاد شد، اما در ذخیره پروفایل مشکلی پیش آمد.'
+            });
+            const permissionError = new FirestorePermissionError({
+              path: userDocRef.path,
+              operation: 'create',
+              requestResourceData: newUserDoc,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
 
         toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
         
-        const effectiveRole = selectedRole === 'teacher' ? teacherSubRole : selectedRole;
         localStorage.setItem('userRole', effectiveRole);
         
         if (selectedRole === 'teacher') {
@@ -133,55 +163,60 @@ export default function LoginPage() {
           router.push('/dashboard');
         }
 
-      } else {
-        // --- LOGIN LOGIC ---
-        const primarySubRole = selectedRole === 'teacher' ? teacherSubRole : undefined;
-        const primaryEmail = createEmailFromNationalId(nationalId, selectedRole, primarySubRole);
-
+      } catch(error: any) {
+         console.error("Signup error:", error);
+         const errorMessage =
+          error.code === 'auth/email-already-in-use' ? 'این نام کاربری/کد ملی قبلا ثبت‌نام کرده است.' :
+          'خطایی در هنگام پردازش درخواست شما رخ داد.';
+        toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: errorMessage });
+      } finally {
+        setLoading(false);
+      }
+      return; // End signup logic
+    }
+    
+    // --- LOGIN LOGIC ---
+    const attemptLogin = async (role: string) => {
+        const email = `${role}-${nationalId}@quizmaster.com`;
         try {
-            await signInWithEmailAndPassword(auth, primaryEmail, password);
-            const effectiveRole = selectedRole === 'teacher' ? teacherSubRole : selectedRole;
-            localStorage.setItem('userRole', effectiveRole);
-            toast({ title: 'ورود موفق', description: 'خوش آمدید!' });
+            await signInWithEmailAndPassword(auth, email, password);
+            localStorage.setItem('userRole', role);
+            return true;
+        } catch (error: any) {
+            // Only suppress "user not found" errors to allow trying the next role
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                return false;
+            }
+            // For other errors, re-throw them to be caught by the outer catch block
+            throw error;
+        }
+    };
 
-            if (selectedRole === 'teacher') {
+    try {
+        let loggedIn = false;
+        if (selectedRole === 'teacher') {
+            // Try logging in as manager first, then teacher
+            loggedIn = await attemptLogin('manager') || await attemptLogin('teacher');
+        } else {
+            loggedIn = await attemptLogin('student');
+        }
+
+        if (loggedIn) {
+            toast({ title: 'ورود موفق', description: 'خوش آمدید!' });
+            const userRole = localStorage.getItem('userRole');
+            if (userRole === 'teacher' || userRole === 'manager') {
                 router.push('/dashboard/teacher');
             } else {
                 router.push('/dashboard');
             }
-        } catch (error: any) {
-            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                 if (selectedRole === 'teacher') {
-                    const secondarySubRole = teacherSubRole === 'manager' ? 'teacher' : 'manager';
-                    const secondaryEmail = createEmailFromNationalId(nationalId, selectedRole, secondarySubRole);
-                    try {
-                        await signInWithEmailAndPassword(auth, secondaryEmail, "any-dummy-password-to-check-existence");
-                    } catch (secondaryError: any) {
-                         if (secondaryError.code !== 'auth/wrong-password') {
-                            toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
-                         } else {
-                            toast({ variant: 'destructive', title: 'خطا در ورود', description: 'شما با این نقش کاربری نمی‌توانید وارد شوید.' });
-                         }
-                         setLoading(false);
-                         return;
-                    }
-                 }
-                 toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
-            } else {
-                const errorMessage = 'خطایی در هنگام ورود رخ داد.';
-                toast({ variant: 'destructive', title: 'خطا', description: errorMessage });
-            }
+        } else {
+            toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
         }
-      }
-
     } catch (error: any) {
-      console.error(error);
-       const errorMessage =
-        error.code === 'auth/email-already-in-use' ? 'این نام کاربری/کد ملی قبلا ثبت‌نام کرده است.' :
-        'خطایی در هنگام پردازش درخواست شما رخ داد.';
-      toast({ variant: 'destructive', title: 'خطا', description: errorMessage });
+        console.error("Login error:", error);
+        toast({ variant: 'destructive', title: 'خطا در ورود', description: 'خطایی در هنگام ورود رخ داد.' });
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
   
@@ -245,7 +280,7 @@ export default function LoginPage() {
             transition={{ duration: 0.3 }}
           >
             <form className="space-y-6" onSubmit={handleAuthSubmission}>
-              {selectedRole === 'teacher' && (
+              {selectedRole === 'teacher' && authMode === 'signup' && (
                 <RadioGroup
                   defaultValue="manager"
                   value={teacherSubRole}
@@ -255,11 +290,11 @@ export default function LoginPage() {
                 >
                   <div className="flex items-center space-x-2 space-x-reverse">
                     <RadioGroupItem value="manager" id="r-manager" />
-                    <Label htmlFor="r-manager">مدیر</Label>
+                    <Label htmlFor="r-manager">ثبت‌نام به عنوان مدیر</Label>
                   </div>
                   <div className="flex items-center space-x-2 space-x-reverse">
                     <RadioGroupItem value="teacher" id="r-teacher" />
-                    <Label htmlFor="r-teacher">معلم</Label>
+                    <Label htmlFor="r-teacher">ثبت‌نام به عنوان معلم</Label>
                   </div>
                 </RadioGroup>
               )}

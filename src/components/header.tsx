@@ -95,26 +95,24 @@ const Header = ({ children }: { children?: ReactNode }) => {
                         </DropdownMenuItem>
                       ) : (
                         <>
-                           <DropdownMenuItem onClick={() => {/* router.push('/dashboard/teacher/create-exam') */}}>
+                           <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/create-exam')}>
                                 <FilePlus className="ml-2 h-4 w-4" />
                                 <span>ایجاد آزمون جدید</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {/* router.push('/dashboard/teacher/manage-exams') */}}>
+                            <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/manage-exams')}>
                                 <Settings className="ml-2 h-4 w-4" />
                                 <span>مدیریت آزمون‌ها</span>
                             </DropdownMenuItem>
                            {userRole === 'manager' && (
-                            <>
                                 <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/create-user')}>
                                     <UserPlus className="ml-2 h-4 w-4" />
                                     <span>ایجاد کاربر</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/manage-users')}>
-                                    <Users className="ml-2 h-4 w-4" />
-                                    <span>مدیریت کاربرها</span>
-                                </DropdownMenuItem>
-                            </>
                            )}
+                           <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/manage-users')}>
+                                <Users className="ml-2 h-4 w-4" />
+                                <span>مدیریت کاربرها</span>
+                           </DropdownMenuItem>
                         </>
                       )}
                       <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>

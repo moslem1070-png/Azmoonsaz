@@ -9,7 +9,7 @@ import CreateUserForm from '@/components/create-user-form';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type Role = 'student' | 'teacher';
+type Role = 'student' | 'teacher' | 'manager';
 
 export default function CreateUserPage() {
   const router = useRouter();
@@ -23,14 +23,13 @@ export default function CreateUserPage() {
 
     if (!isUserLoading && !user) {
       router.push('/');
-    } else if (!isUserLoading && user && role !== 'teacher') {
-      // For now, only teachers/managers can create users.
-      // We might want to check for a 'manager' sub-role here in the future.
-      router.push('/dashboard');
+    } else if (!isUserLoading && user && role !== 'manager') {
+      // Only managers can create users.
+      router.push('/dashboard/teacher');
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading || !user || userRole !== 'teacher') {
+  if (isUserLoading || !user || userRole !== 'manager') {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
   }
 

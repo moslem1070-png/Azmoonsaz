@@ -42,9 +42,10 @@ export type HistoryItem = {
 
 export type UserRole = 'student' | 'teacher' | 'admin' | 'manager';
 
+// Represents a user document in Firestore
 export type User = {
-  id: string;
-  fullName: string;
-  nationalId: string;
+  id: string; // This will be the Firebase Auth UID
+  displayName: string;
+  email: string;
   role: 'student' | 'teacher' | 'manager';
 };

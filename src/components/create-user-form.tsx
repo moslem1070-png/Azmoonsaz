@@ -5,14 +5,17 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserPlus, Fingerprint, Key, Briefcase } from 'lucide-react';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const formSchema = z.object({
   fullName: z.string().min(3, { message: 'نام کامل باید حداقل ۳ حرف باشد.' }),
@@ -39,6 +42,7 @@ const createEmailFromUsername = (username: string, role: Role) => {
 
 export default function CreateUserForm() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -59,8 +63,40 @@ export default function CreateUserForm() {
     const email = createEmailFromUsername(data.username, data.role as Role);
 
     try {
+      // Step 1: Create user in Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, data.password);
-      await updateProfile(userCredential.user, { displayName: data.fullName });
+      const user = userCredential.user;
+      
+      // Step 2: Update user's display name in Auth
+      await updateProfile(user, { displayName: data.fullName });
+
+      // Step 3: Create user document in Firestore
+      const userDocRef = doc(firestore, 'users', user.uid);
+      const newUserDoc = {
+          id: user.uid,
+          displayName: data.fullName,
+          email: user.email,
+          role: data.role,
+      };
+
+      // Set document in Firestore, with error handling
+      setDoc(userDocRef, newUserDoc)
+        .catch((serverError) => {
+            console.error("Failed to create user document in Firestore", serverError);
+            const permissionError = new FirestorePermissionError({
+                path: userDocRef.path,
+                operation: 'create',
+                requestResourceData: newUserDoc,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            // We might want to rollback auth user creation here, but for now just show error
+            toast({
+                variant: 'destructive',
+                title: 'خطای پایگاه داده',
+                description: 'کاربر در سیستم احراز هویت ایجاد شد اما پروفایل او در پایگاه داده ذخیره نشد.',
+            });
+        });
+
 
       toast({
         title: 'کاربر با موفقیت ایجاد شد',
