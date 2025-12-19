@@ -68,6 +68,12 @@ export default function LoginPage() {
     try {
       let userCredential;
       if (authMode === 'signup') {
+        if (selectedRole === 'teacher') {
+            toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت نام برای مدیر وجود ندارد. لطفا وارد شوید.' });
+            setLoading(false);
+            return;
+        }
+
         if (password !== confirmPassword) {
           toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور و تکرار آن یکسان نیستند.' });
           setLoading(false);
@@ -114,11 +120,11 @@ export default function LoginPage() {
   };
   
   const getTitle = () => {
-    if (selectedRole === 'teacher') {
-        return 'ورود مدیر / معلم';
+    if (authMode === 'login') {
+      return selectedRole === 'teacher' ? 'ورود مدیر / معلم' : 'ورود دانش‌آموز';
     }
-    if (authMode === 'login') return 'ورود دانش‌آموز';
-    return 'ثبت‌نام دانش‌آموز';
+    // Signup mode is only for students now, but we check role just in case
+    return selectedRole === 'teacher' ? 'ثبت‌نام مدیر / معلم' : 'ثبت‌نام دانش‌آموز';
   };
 
   const formVariants = {
@@ -134,7 +140,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#302851] to-[#1A162E] p-4">
-      <GlassCard className="w-full max-w-md p-8 space-y-8">
+      <GlassCard className="w-full max-w-md p-8 space-y-8 min-h-[500px] sm:min-h-0 flex flex-col justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-2">{getTitle()}</h1>
           <p className="text-muted-foreground">
@@ -232,7 +238,7 @@ export default function LoginPage() {
           </motion.div>
         </AnimatePresence>
 
-        {selectedRole === 'student' && (
+        {selectedRole !== 'teacher' && (
           <div className="flex items-center justify-center space-x-reverse space-x-2">
               <Button
                 variant="link"
