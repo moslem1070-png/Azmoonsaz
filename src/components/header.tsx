@@ -91,7 +91,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
                           <span>کارنامه آزمون‌های قبلی</span>
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem onClick={() => {/* router.push('/profile') */}}>
+                      <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
                         <Edit className="ml-2 h-4 w-4" />
                         <span>ویرایش پروفایل</span>
                       </DropdownMenuItem>
