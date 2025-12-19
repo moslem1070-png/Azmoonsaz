@@ -78,7 +78,11 @@ export default function LoginPage() {
 
   const handleRoleChange = (role: Role) => {
     setSelectedRole(role);
-    setAuthMode('login'); // Always default to login when role changes
+    if (role === 'teacher') {
+      setAuthMode('login'); 
+    } else {
+      setAuthMode('login');
+    }
     setNationalId('');
     setPassword('');
     setConfirmPassword('');
@@ -103,7 +107,7 @@ export default function LoginPage() {
     }
 
     try {
-      if (authMode === 'signup') {
+      if (authMode === 'signup' && selectedRole === 'student') {
         // --- SIGNUP LOGIC ---
         if (passwordError) {
             toast({ variant: 'destructive', title: 'خطا', description: passwordError });
@@ -121,7 +125,7 @@ export default function LoginPage() {
             return;
         }
 
-        const email = createEmailFromNationalId(nationalId, selectedRole, selectedRole === 'teacher' ? teacherSubRole : undefined);
+        const email = createEmailFromNationalId(nationalId, selectedRole);
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
         await updateProfile(userCredential.user, { displayName: fullName });
@@ -129,11 +133,7 @@ export default function LoginPage() {
         toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
         localStorage.setItem('userRole', selectedRole);
         
-        if (selectedRole === 'teacher') {
-            router.push('/dashboard/teacher');
-        } else {
-            router.push('/dashboard');
-        }
+        router.push('/dashboard');
 
       } else {
         // --- LOGIN LOGIC ---
@@ -201,7 +201,7 @@ export default function LoginPage() {
     if (authMode === 'login') {
       return selectedRole === 'teacher' ? 'ورود مدیر / معلم' : 'ورود دانش‌آموز';
     }
-    return selectedRole === 'teacher' ? 'ثبت‌نام مدیر / معلم' : 'ثبت‌نام دانش‌آموز';
+    return 'ثبت‌نام دانش‌آموز';
   };
 
   const formVariants = {
@@ -353,29 +353,31 @@ export default function LoginPage() {
           </motion.div>
         </AnimatePresence>
 
-        <div className="flex items-center justify-center space-x-reverse space-x-2">
-            <Button
-              variant="link"
-              onClick={() => setAuthMode('login')}
-              className={cn(
-                'text-muted-foreground transition-colors',
-                authMode === 'login' && 'font-bold text-accent'
-              )}
-            >
-              ورود
-            </Button>
-            <div className="h-4 w-px bg-border"></div>
-            <Button
-              variant="link"
-              onClick={() => setAuthMode('signup')}
-              className={cn(
-                'text-muted-foreground transition-colors',
-                authMode === 'signup' && 'font-bold text-accent'
-              )}
-            >
-              ثبت‌نام
-            </Button>
-        </div>
+        {selectedRole === 'student' && (
+            <div className="flex items-center justify-center space-x-reverse space-x-2">
+                <Button
+                variant="link"
+                onClick={() => setAuthMode('login')}
+                className={cn(
+                    'text-muted-foreground transition-colors',
+                    authMode === 'login' && 'font-bold text-accent'
+                )}
+                >
+                ورود
+                </Button>
+                <div className="h-4 w-px bg-border"></div>
+                <Button
+                variant="link"
+                onClick={() => setAuthMode('signup')}
+                className={cn(
+                    'text-muted-foreground transition-colors',
+                    authMode === 'signup' && 'font-bold text-accent'
+                )}
+                >
+                ثبت‌نام
+                </Button>
+            </div>
+        )}
 
       </GlassCard>
     </div>
