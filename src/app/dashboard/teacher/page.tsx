@@ -8,7 +8,7 @@ import { useUser } from '@/firebase';
 import GlassCard from '@/components/glass-card';
 import TeacherActionButtons from '@/components/teacher-action-buttons';
 
-type Role = 'student' | 'teacher';
+type Role = 'student' | 'teacher' | 'manager';
 
 export default function TeacherDashboardPage() {
   const router = useRouter();
@@ -22,13 +22,24 @@ export default function TeacherDashboardPage() {
 
     if (!isUserLoading && !user) {
       router.push('/');
-    } else if (!isUserLoading && user && role !== 'teacher') {
+    } else if (!isUserLoading && user && role === 'student') {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading || !user || userRole !== 'teacher') {
+  if (isUserLoading || !user || userRole === 'student') {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
+  }
+
+  const getTitle = () => {
+    if (userRole === 'manager') return 'داشبورد مدیر';
+    if (userRole === 'teacher') return 'داشبورد معلم';
+    return 'داشبورد';
+  }
+
+  const getWelcomeMessage = () => {
+    const name = user.displayName || (userRole === 'manager' ? 'مدیر' : 'معلم');
+    return `خوش آمدید، ${name}!`;
   }
 
   return (
@@ -36,12 +47,12 @@ export default function TeacherDashboardPage() {
       <Header />
       <main className="container mx-auto px-4 py-8 flex-1">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-right">داشبورد مدیر</h1>
-             <TeacherActionButtons />
+            <h1 className="text-2xl sm:text-3xl font-bold text-right">{getTitle()}</h1>
+             <TeacherActionButtons role={userRole} />
         </div>
 
         <GlassCard className="p-6 sm:p-8">
-            <h2 className="text-xl sm:text-2xl font-bold mb-4">خوش آمدید، {user.displayName}!</h2>
+            <h2 className="text-xl sm:text-2xl font-bold mb-4">{getWelcomeMessage()}</h2>
             <p className="text-muted-foreground">
                 از این پنل می‌توانید آزمون‌های جدید ایجاد کنید، آزمون‌های موجود را مدیریت کنید و نتایج دانش‌آموزان را مشاهده نمایید.
             </p>

@@ -42,32 +42,28 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  const isNationalIdLengthValid = useMemo(() => nationalId.length === 10, [nationalId]);
-  const isNationalIdNumeric = useMemo(() => /^\d+$/.test(nationalId), [nationalId]);
   const isPasswordLengthValid = useMemo(() => password.length >= 8, [password]);
 
 
   const nationalIdError = useMemo(() => {
-    if (selectedRole === 'student' && nationalId.length > 0) {
-      if (!isNationalIdNumeric) return "کد ملی فقط باید شامل عدد باشد.";
-      if (!isNationalIdLengthValid) return "کد ملی باید ۱۰ رقم باشد.";
+    if (selectedRole === 'student' && nationalId && !/^\d{10}$/.test(nationalId)) {
+      return "کد ملی باید ۱۰ رقم و فقط شامل عدد باشد.";
     }
     return null;
-  }, [selectedRole, nationalId, isNationalIdLengthValid, isNationalIdNumeric]);
+  }, [selectedRole, nationalId]);
 
   const passwordError = useMemo(() => {
-    if (authMode === 'signup' && password.length > 0 && !isPasswordLengthValid) {
+    if (authMode === 'signup' && password && password.length < 8) {
         return "رمز عبور باید حداقل ۸ کاراکتر باشد.";
     }
     return null;
-  }, [authMode, password, isPasswordLengthValid]);
+  }, [authMode, password]);
 
 
   useEffect(() => {
-    // If user is already logged in, redirect based on role
     if (!isUserLoading && user) {
-      const role = localStorage.getItem('userRole') as Role;
-      if (role === 'teacher') {
+      const role = localStorage.getItem('userRole');
+      if (role === 'teacher' || role === 'manager') {
         router.push('/dashboard/teacher');
       } else {
         router.push('/dashboard');
@@ -78,7 +74,7 @@ export default function LoginPage() {
 
   const handleRoleChange = (role: Role) => {
     setSelectedRole(role);
-    setAuthMode('login');
+    setAuthMode('login'); // Always default to login when role changes
     setNationalId('');
     setPassword('');
     setConfirmPassword('');
@@ -91,7 +87,7 @@ export default function LoginPage() {
     setLoading(true);
 
     if (!nationalId || !password) {
-      toast({ variant: 'destructive', title: 'خطا', description: 'کد ملی و رمز عبور الزامی است.' });
+      toast({ variant: 'destructive', title: 'خطا', description: 'نام کاربری/کد ملی و رمز عبور الزامی است.' });
       setLoading(false);
       return;
     }
@@ -103,7 +99,7 @@ export default function LoginPage() {
     }
 
     try {
-      if (authMode === 'signup' && selectedRole === 'student') {
+      if (authMode === 'signup') {
         // --- SIGNUP LOGIC ---
         if (passwordError) {
             toast({ variant: 'destructive', title: 'خطا', description: passwordError });
@@ -121,15 +117,21 @@ export default function LoginPage() {
             return;
         }
 
-        const email = createEmailFromNationalId(nationalId, selectedRole);
+        const email = createEmailFromNationalId(nationalId, selectedRole, selectedRole === 'teacher' ? teacherSubRole : undefined);
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
         await updateProfile(userCredential.user, { displayName: fullName });
 
         toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
-        localStorage.setItem('userRole', selectedRole);
         
-        router.push('/dashboard');
+        const effectiveRole = selectedRole === 'teacher' ? teacherSubRole : selectedRole;
+        localStorage.setItem('userRole', effectiveRole);
+        
+        if (selectedRole === 'teacher') {
+          router.push('/dashboard/teacher');
+        } else {
+          router.push('/dashboard');
+        }
 
       } else {
         // --- LOGIN LOGIC ---
@@ -137,8 +139,9 @@ export default function LoginPage() {
         const primaryEmail = createEmailFromNationalId(nationalId, selectedRole, primarySubRole);
 
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, primaryEmail, password);
-            localStorage.setItem('userRole', selectedRole);
+            await signInWithEmailAndPassword(auth, primaryEmail, password);
+            const effectiveRole = selectedRole === 'teacher' ? teacherSubRole : selectedRole;
+            localStorage.setItem('userRole', effectiveRole);
             toast({ title: 'ورود موفق', description: 'خوش آمدید!' });
 
             if (selectedRole === 'teacher') {
@@ -147,35 +150,24 @@ export default function LoginPage() {
                 router.push('/dashboard');
             }
         } catch (error: any) {
-            // Handle specific login errors
             if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                 // To give a more specific error, we can try to sign in with the *other* teacher sub-role
-                 // to see if the user exists but is trying to log in with the wrong role.
                  if (selectedRole === 'teacher') {
                     const secondarySubRole = teacherSubRole === 'manager' ? 'teacher' : 'manager';
                     const secondaryEmail = createEmailFromNationalId(nationalId, selectedRole, secondarySubRole);
                     try {
-                        // We don't care about the password, just seeing if the user exists.
-                        // A wrong password here will still throw, which is fine.
                         await signInWithEmailAndPassword(auth, secondaryEmail, "any-dummy-password-to-check-existence");
-                         // If this succeeds (it shouldn't with a dummy password), it's an unexpected state.
                     } catch (secondaryError: any) {
                          if (secondaryError.code !== 'auth/wrong-password') {
-                            // If the error for the other role is NOT 'wrong-password', it means the user doesn't exist for that role either.
-                            // So, the original error for invalid credentials is correct.
                             toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
                          } else {
-                            // If the error for the other role *is* 'wrong-password', it means the user exists but with the other role.
                             toast({ variant: 'destructive', title: 'خطا در ورود', description: 'شما با این نقش کاربری نمی‌توانید وارد شوید.' });
                          }
                          setLoading(false);
                          return;
                     }
                  }
-                 // Default error for students or if the teacher check fails
                  toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
             } else {
-                // Handle other Firebase auth errors
                 const errorMessage = 'خطایی در هنگام ورود رخ داد.';
                 toast({ variant: 'destructive', title: 'خطا', description: errorMessage });
             }
@@ -197,7 +189,7 @@ export default function LoginPage() {
     if (authMode === 'login') {
       return selectedRole === 'teacher' ? 'ورود مدیر / معلم' : 'ورود دانش‌آموز';
     }
-    return 'ثبت‌نام دانش‌آموز';
+    return selectedRole === 'teacher' ? 'ثبت‌نام مدیر / معلم' : 'ثبت‌نام دانش‌آموز';
   };
 
   const formVariants = {
@@ -253,7 +245,7 @@ export default function LoginPage() {
             transition={{ duration: 0.3 }}
           >
             <form className="space-y-6" onSubmit={handleAuthSubmission}>
-              {selectedRole === 'teacher' && authMode === 'login' && (
+              {selectedRole === 'teacher' && (
                 <RadioGroup
                   defaultValue="manager"
                   value={teacherSubRole}
@@ -303,7 +295,7 @@ export default function LoginPage() {
                   />
                 </div>
                 {nationalIdError && (
-                    <p className="text-xs text-muted-foreground mt-1.5 text-right">{nationalIdError}</p>
+                    <p className="text-xs text-red-400 mt-1.5 text-right">{nationalIdError}</p>
                 )}
               </div>
 
@@ -323,7 +315,7 @@ export default function LoginPage() {
                     />
                 </div>
                 {passwordError && (
-                    <p className="text-xs text-muted-foreground mt-1.5 text-right">{passwordError}</p>
+                    <p className="text-xs text-red-400 mt-1.5 text-right">{passwordError}</p>
                 )}
               </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { BookOpen, User, LogOut, Edit, GraduationCap, Home, History } from "lucide-react";
+import { BookOpen, User, LogOut, Edit, GraduationCap, Home, History, Briefcase } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { useState, useEffect, type ReactNode } from "react";
@@ -19,7 +19,7 @@ import {
 import { useAuth, useUser } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 
-type Role = 'student' | 'teacher';
+type Role = 'student' | 'teacher' | 'manager';
 
 const Header = ({ children }: { children?: ReactNode }) => {
   const { user } = useUser();
@@ -57,11 +57,14 @@ const Header = ({ children }: { children?: ReactNode }) => {
     if (userRole === 'student') {
         return <GraduationCap />;
     }
+    if (userRole === 'teacher' || userRole === 'manager') {
+        return <Briefcase />;
+    }
     return <User />;
   }
 
   const getDashboardUrl = () => {
-      return userRole === 'teacher' ? '/dashboard/teacher' : '/dashboard';
+      return (userRole === 'teacher' || userRole === 'manager') ? '/dashboard/teacher' : '/dashboard';
   }
 
   return (
