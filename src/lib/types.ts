@@ -19,6 +19,7 @@ export type Exam = {
 
 export type HistoryItem = {
   id: string;
+  examId: string;
   title: string;
   date: string;
   score: number;

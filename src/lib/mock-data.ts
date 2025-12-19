@@ -57,6 +57,7 @@ export const exams: Exam[] = [
 export const history: HistoryItem[] = [
     {
         id: 'hist1',
+        examId: '2',
         title: 'آزمون علوم',
         date: '۱۴۰۳/۰۴/۱۰',
         score: 85,
@@ -66,6 +67,7 @@ export const history: HistoryItem[] = [
     },
     {
         id: 'hist2',
+        examId: '3',
         title: 'آزمون تاریخ ایران',
         date: '۱۴۰۳/۰۴/۰۵',
         score: 92,
@@ -75,6 +77,7 @@ export const history: HistoryItem[] = [
     },
     {
         id: 'hist3',
+        examId: '1',
         title: 'آزمون اطلاعات عمومی',
         date: '۱۴۰۳/۰۳/۲۸',
         score: 70,

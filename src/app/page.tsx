@@ -1,6 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { Clock, FileQuestion, TrendingUp, CheckCircle, Percent } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Clock, FileQuestion, TrendingUp, CheckCircle, Percent, Lock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,11 +12,30 @@ import { exams, history } from "@/lib/mock-data";
 import Header from "@/components/header";
 import GlassCard from "@/components/glass-card";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { cn } from "@/lib/utils";
 
 export default function Home() {
+  const router = useRouter();
+  const { toast } = useToast();
+
   const getPlaceholderImage = (id: string) => {
     return PlaceHolderImages.find(img => img.id === id)?.imageUrl ?? 'https://picsum.photos/seed/1/600/400';
   }
+
+  const completedExamIds = new Set(history.map(h => h.examId));
+
+  const handleStartExam = (examId: string) => {
+    if (completedExamIds.has(examId)) {
+      toast({
+        variant: "destructive",
+        title: "آزمون تکراری",
+        description: "شما قبلاً در این آزمون شرکت کرده‌اید.",
+      });
+    } else {
+      router.push(`/exam/${examId}`);
+    }
+  };
+
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -21,7 +44,9 @@ export default function Home() {
         <section id="available-exams">
           <h1 className="text-3xl font-bold mb-6 text-right">آزمون‌های موجود</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {exams.map((exam) => (
+            {exams.map((exam) => {
+              const isCompleted = completedExamIds.has(exam.id);
+              return (
               <GlassCard key={exam.id} className="flex flex-col overflow-hidden">
                 <div className="relative h-48 w-full">
                   <Image
@@ -52,12 +77,19 @@ export default function Home() {
                       <span>{exam.questions.length} سوال</span>
                     </div>
                   </div>
-                  <Button asChild className="w-full bg-primary/80 hover:bg-primary transition-colors">
-                    <Link href={`/exam/${exam.id}`}>شروع آزمون</Link>
+                  <Button
+                    onClick={() => handleStartExam(exam.id)}
+                    className={cn(
+                      "w-full transition-colors",
+                      isCompleted ? "bg-gray-500 hover:bg-gray-600" : "bg-primary/80 hover:bg-primary"
+                    )}
+                  >
+                    {isCompleted ? <Lock className="ml-2 h-4 w-4" /> : null}
+                    {isCompleted ? "تکمیل شده" : "شروع آزمون"}
                   </Button>
                 </div>
               </GlassCard>
-            ))}
+            )})}
           </div>
         </section>
 
