@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ArrowRight, Trash2, UserPlus } from 'lucide-react';
+import { ArrowRight, Trash2 } from 'lucide-react';
 import { collection, deleteDoc, doc } from 'firebase/firestore';
 
 import Header from '@/components/header';
@@ -143,10 +143,6 @@ export default function ManageUsersPage() {
             <Button variant="ghost" size="sm" onClick={() => router.back()}>
               <ArrowRight className="ml-2 h-4 w-4" />
               بازگشت
-            </Button>
-            <Button size="sm" onClick={() => router.push('/dashboard/teacher/create-user')}>
-                <UserPlus className="ml-2 h-4 w-4" />
-                ایجاد کاربر جدید
             </Button>
           </div>
         </div>
