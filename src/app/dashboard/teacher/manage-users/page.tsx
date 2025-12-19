@@ -2,11 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ArrowRight, Trash2, UserPlus } from 'lucide-react';
-import { collection, deleteDoc, doc } from 'firebase/firestore';
+import { ArrowRight, Trash2, UserPlus, RefreshCw } from 'lucide-react';
+import { collection, deleteDoc, doc, setDoc } from 'firebase/firestore';
 
 import Header from '@/components/header';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
 import GlassCard from '@/components/glass-card';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,8 +39,10 @@ export default function ManageUsersPage() {
   const router = useRouter();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<Role | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Fetch all users from Firestore only if the user is a teacher
   const usersCollection = useMemoFirebase(
@@ -52,7 +54,7 @@ export default function ManageUsersPage() {
     },
     [firestore, userRole]
   );
-  const { data: users, isLoading: usersLoading } = useCollection<AppUser>(usersCollection);
+  const { data: users, isLoading: usersLoading, error } = useCollection<AppUser>(usersCollection);
 
   useEffect(() => {
     // This will only run on the client side
@@ -82,7 +84,7 @@ export default function ManageUsersPage() {
         await deleteDoc(doc(firestore, 'users', userId));
         toast({
             title: 'موفق',
-            description: 'کاربر با موفقیت از پایگاه داده حذف شد.',
+            description: 'کاربر با موفقیت از پایگاه داده حذف شد. برای حذف کامل از سیستم احراز هویت، نیاز به عملیات سمت سرور است.',
         });
     } catch(error) {
         console.error('Error deleting user:', error);
@@ -93,7 +95,6 @@ export default function ManageUsersPage() {
         });
     }
   };
-
 
   const getRoleBadgeVariant = (role: Role) => {
     switch (role) {
@@ -175,7 +176,7 @@ export default function ManageUsersPage() {
                       </TableCell>
                       <TableCell className="text-right hidden sm:table-cell text-muted-foreground">{u.nationalId}</TableCell>
                       <TableCell className="text-left">
-                        {u.role === 'student' && (
+                        {u.id !== user.uid && u.role === 'student' && (
                           <div className="flex gap-2 justify-end">
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -201,6 +202,7 @@ export default function ManageUsersPage() {
                             </AlertDialog>
                           </div>
                         )}
+                        {u.id === user.uid && (<span className="text-xs text-muted-foreground">شما</span>)}
                         {u.role !== 'student' && (<span className="text-xs text-muted-foreground">-</span>)}
                       </TableCell>
                     </TableRow>
