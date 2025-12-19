@@ -37,25 +37,14 @@ const generateExamQuestionsPrompt = ai.definePrompt({
   name: 'generateExamQuestionsPrompt',
   input: {schema: GenerateExamQuestionsInputSchema},
   output: {schema: GenerateExamQuestionsOutputSchema},
-  prompt: `You are an expert exam question generator. Generate {{numberOfQuestions}} exam questions on the topic of {{{topic}}} with a difficulty level of {{{difficulty}}}.
+  prompt: `You are an expert exam question generator. Your task is to generate questions in Farsi.
+Generate {{numberOfQuestions}} exam questions on the topic of {{{topic}}} with a difficulty level of {{{difficulty}}}.
 
-Each question should have multiple choice options, with one correct answer. Provide the questions in JSON format, with a "questions" array containing objects with "question", "options", and "correctAnswer" fields.
+Each question should have multiple choice options, with one correct answer.
+All questions, options, and the correct answer must be in Farsi.
 
-Example:
-{
-  "questions": [
-    {
-      "question": "What is the capital of France?",
-      "options": ["Berlin", "Paris", "Madrid", "Rome"],
-      "correctAnswer": "Paris"
-    },
-    {
-      "question": "What is the highest mountain in the world?",
-      "options": ["K2", "Kangchenjunga", "Mount Everest", "Lhotse"],
-      "correctAnswer": "Mount Everest"
-    }
-  ]
-}`,
+Provide the questions in JSON format, with a "questions" array containing objects with "question", "options", and "correctAnswer" fields.
+`,
 });
 
 const generateExamQuestionsFlow = ai.defineFlow(
