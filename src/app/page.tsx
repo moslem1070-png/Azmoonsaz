@@ -12,15 +12,25 @@ import GlassCard from '@/components/glass-card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useUser } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 type Role = 'student' | 'teacher';
+type TeacherSubRole = 'manager' | 'teacher';
 type AuthMode = 'login' | 'signup';
 
 // Helper function to create a fake email from national ID
-const createEmailFromNationalId = (nationalId: string, role: Role) => `${role}-${nationalId}@quizmaster.com`;
+const createEmailFromNationalId = (nationalId: string, role: Role, subRole?: TeacherSubRole) => {
+    if (role === 'teacher' && subRole) {
+        return `${subRole}-${nationalId}@quizmaster.com`;
+    }
+    return `${role}-${nationalId}@quizmaster.com`;
+}
+
 
 export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<Role>('student');
+  const [teacherSubRole, setTeacherSubRole] = useState<TeacherSubRole>('manager');
   const [authMode, setAuthMode] = useState<AuthMode>('login');
 
   const [nationalId, setNationalId] = useState('');
@@ -35,7 +45,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   
   const isNationalIdLengthValid = useMemo(() => nationalId.length === 10, [nationalId]);
-  const isNationalIdNumeric = useMemo(() => /^\d*$/.test(nationalId), [nationalId]);
+  const isNationalIdNumeric = useMemo(() => /^\d+$/.test(nationalId), [nationalId]);
   const isPasswordLengthValid = useMemo(() => password.length >= 8, [password]);
 
 
@@ -82,6 +92,12 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
+    if (selectedRole === 'teacher' && authMode === 'signup') {
+        toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت‌نام برای مدیر یا معلم وجود ندارد.' });
+        setLoading(false);
+        return;
+    }
+
     if (!nationalId || !password) {
       toast({ variant: 'destructive', title: 'خطا', description: 'کد ملی و رمز عبور الزامی است.' });
       setLoading(false);
@@ -94,7 +110,7 @@ export default function LoginPage() {
         return;
     }
 
-    const email = createEmailFromNationalId(nationalId, selectedRole);
+    const email = createEmailFromNationalId(nationalId, selectedRole, selectedRole === 'teacher' ? teacherSubRole : undefined);
 
     try {
       let userCredential;
@@ -139,7 +155,7 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error(error);
       const errorMessage =
-        error.code === 'auth/user-not-found' ? 'کاربری با این کد ملی یافت نشد.' :
+        error.code === 'auth/user-not-found' ? 'کاربری با این مشخصات یافت نشد.' :
         error.code === 'auth/wrong-password' ? 'رمز عبور اشتباه است.' :
         error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلا ثبت‌نام کرده است.' :
         error.code === 'auth/invalid-credential' ? 'اطلاعات ورود نامعتبر است.' :
@@ -215,6 +231,24 @@ export default function LoginPage() {
             transition={{ duration: 0.3 }}
           >
             <form className="space-y-6" onSubmit={handleAuthSubmission}>
+              {selectedRole === 'teacher' && authMode === 'login' && (
+                <RadioGroup
+                  defaultValue="manager"
+                  onValueChange={(value: TeacherSubRole) => setTeacherSubRole(value)}
+                  className="flex justify-center gap-x-6"
+                  dir="rtl"
+                >
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <RadioGroupItem value="manager" id="r-manager" />
+                    <Label htmlFor="r-manager">مدیر</Label>
+                  </div>
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <RadioGroupItem value="teacher" id="r-teacher" />
+                    <Label htmlFor="r-teacher">معلم</Label>
+                  </div>
+                </RadioGroup>
+              )}
+
               {authMode === 'signup' && (
                  <div className="relative">
                   <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -229,12 +263,12 @@ export default function LoginPage() {
                 </div>
               )}
               
-              <div>
-                <div className="relative">
-                  <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <div className='relative'>
+                <div className="relative flex items-center">
+                  <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
                   <Input 
                     type="text" 
-                    placeholder={selectedRole === 'teacher' ? "کد ملی یا نام کاربری" : "کد ملی"}
+                    placeholder={selectedRole === 'teacher' ? "نام کاربری" : "کد ملی"}
                     className={cn(
                       "pl-10 text-right",
                       nationalIdError && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
@@ -251,8 +285,8 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <div className="relative flex items-center">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
                     <Input 
                     type="password" 
                     placeholder="رمز عبور" 
@@ -303,17 +337,21 @@ export default function LoginPage() {
             >
               ورود
             </Button>
-            <div className="h-4 w-px bg-border"></div>
-            <Button
-              variant="link"
-              onClick={() => setAuthMode('signup')}
-              className={cn(
-                'text-muted-foreground transition-colors',
-                authMode === 'signup' && 'font-bold text-accent'
-              )}
-            >
-              ثبت‌نام
-            </Button>
+            {selectedRole === 'student' && (
+              <>
+                <div className="h-4 w-px bg-border"></div>
+                <Button
+                  variant="link"
+                  onClick={() => setAuthMode('signup')}
+                  className={cn(
+                    'text-muted-foreground transition-colors',
+                    authMode === 'signup' && 'font-bold text-accent'
+                  )}
+                >
+                  ثبت‌نام
+                </Button>
+              </>
+            )}
         </div>
 
       </GlassCard>
