@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Clock, FileQuestion, Lock } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from 'react';
 
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +17,6 @@ import { useUser } from "@/firebase";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { toast } = useToast();
   const [completedExamIds, setCompletedExamIds] = useState<Set<string>>(new Set());
   const { user, isUserLoading } = useUser();
 
@@ -40,15 +38,8 @@ export default function DashboardPage() {
   }
 
   const handleStartExam = (examId: string) => {
-    if (completedExamIds.has(examId)) {
-      toast({
-        variant: "destructive",
-        title: "آزمون تکراری",
-        description: "شما قبلاً در این آزمون شرکت کرده‌اید.",
-      });
-    } else {
-      router.push(`/exam/${examId}`);
-    }
+    // Navigate to the pre-exam start page
+    router.push(`/exam/${examId}/start`);
   };
   
   if (isUserLoading || !user) {
@@ -83,8 +74,7 @@ export default function DashboardPage() {
                   </Badge>
                 </div>
                 <div className="p-6 flex flex-col flex-1">
-                  <h2 className="text-xl font-bold mb-2">{exam.title}</h2>
-                  <p className="text-muted-foreground mb-4 flex-1">{exam.description}</p>
+                  <h2 className="text-xl font-bold mb-4 flex-1">{exam.title}</h2>
                   <div className="flex justify-between items-center text-muted-foreground text-sm mb-6">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-accent" />
@@ -104,7 +94,7 @@ export default function DashboardPage() {
                     disabled={isCompleted}
                   >
                     {isCompleted ? <Lock className="ml-2 h-4 w-4" /> : null}
-                    {isCompleted ? "تکمیل شده" : "شروع آزمون"}
+                    {isCompleted ? "مشاهده نتایج" : "شروع آزمون"}
                   </Button>
                 </div>
               </GlassCard>
