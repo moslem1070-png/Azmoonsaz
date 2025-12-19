@@ -1,20 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image'; // Import the Image component
 import {
   User,
   LogOut,
   Edit,
   GraduationCap,
-  Home,
   History,
   Briefcase,
   FilePlus,
   Settings,
-  UserPlus,
   Users,
   LayoutDashboard,
+  BrainCircuit,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
@@ -158,13 +156,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
               آزمونساز
             </h1>
             <div className="p-2 bg-primary/80 rounded-lg group-hover:scale-110 transition-transform">
-              <Image 
-                src="/logo.jpg"
-                alt="آزمونساز لوگو"
-                width={24}
-                height={24}
-                className="h-6 w-6"
-              />
+              <BrainCircuit className="h-6 w-6 text-primary-foreground" />
             </div>
           </Link>
         </div>
