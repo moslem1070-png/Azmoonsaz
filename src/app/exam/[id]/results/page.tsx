@@ -32,7 +32,13 @@ export default function ResultsPage() {
     { name: "صحیح", value: MOCK_RESULTS.correct, color: "hsl(var(--chart-1))" },
     { name: "غلط", value: MOCK_RESULTS.incorrect, color: "hsl(var(--chart-3))" },
     { name: "بدون پاسخ", value: MOCK_RESULTS.total - MOCK_RESULTS.correct - MOCK_RESULTS.incorrect, color: "hsl(var(--muted))" },
-  ];
+  ].sort((a, b) => {
+    if (a.value > b.value) return -1;
+    if (a.value < b.value) return 1;
+    if (a.name === "صحیح") return -1;
+    if (b.name === "صحیح") return 1;
+    return 0;
+  });
 
   if (!exam) {
     return (
@@ -95,9 +101,9 @@ export default function ResultsPage() {
 
         <div className="h-48 mt-12" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
-                 <BarChart data={data} layout="vertical" margin={{ right: 40, left: 40 }}>
+                 <BarChart data={data} layout="vertical" margin={{ left: 10 }}>
                     <XAxis type="number" hide />
-                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--foreground))' }} width={80} tickMargin={10} reversed={true}/>
+                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--foreground))' }} width={80} tickMargin={10} />
                     <Tooltip
                         cursor={{ fill: 'transparent' }}
                         contentStyle={{
