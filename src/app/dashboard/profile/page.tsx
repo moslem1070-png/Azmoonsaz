@@ -19,7 +19,9 @@ import { useUser, useAuth } from '@/firebase';
 // Helper to get role from email
 const getRoleFromEmail = (email?: string | null): string => {
     if (!email) return 'student';
-    return email.split('-')[0];
+    // Handles roles like 'student', 'teacher', 'manager'
+    const role = email.split('-')[0].split('@')[0];
+    return role;
 }
 
 // Helper function to create a fake email from national ID

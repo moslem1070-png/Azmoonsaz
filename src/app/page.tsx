@@ -21,10 +21,8 @@ type AuthMode = 'login' | 'signup';
 
 // Helper function to create a fake email from national ID
 const createEmailFromNationalId = (nationalId: string, role: Role, subRole?: TeacherSubRole) => {
-    if (role === 'teacher' && subRole) {
-        return `${subRole}-${nationalId}@quizmaster.com`;
-    }
-    return `${role}-${nationalId}@quizmaster.com`;
+    const rolePrefix = subRole || role;
+    return `${rolePrefix}-${nationalId}@quizmaster.com`;
 }
 
 
@@ -347,7 +345,7 @@ export default function LoginPage() {
                   />
                 </div>
               )}
-              <Button type="submit" className="w-full bg-primary/80 hover:bg-primary" disabled={loading || (selectedRole === 'student' && (!!nationalIdError || (authMode === 'signup' && !!passwordError)))}>
+              <Button type="submit" className="w-full bg-primary/80 hover:bg-primary" disabled={loading || (selectedRole === 'student' && !!nationalIdError) || (authMode === 'signup' && !!passwordError)}>
                 {loading ? 'در حال پردازش...' : (authMode === 'login' ? 'ورود' : 'ایجاد حساب')}
                 {!loading && <ArrowRight className="mr-2 h-4 w-4" />}
               </Button>

@@ -33,7 +33,7 @@ type FormData = z.infer<typeof formSchema>;
 type Role = 'student' | 'teacher' | 'manager';
 
 const createEmailFromUsername = (username: string, role: Role) => {
-    const rolePrefix = role === 'manager' ? 'teacher' : role;
+    const rolePrefix = role === 'manager' ? 'manager' : (role === 'teacher' ? 'teacher' : 'student');
     return `${rolePrefix}-${username}@quizmaster.com`;
 }
 
