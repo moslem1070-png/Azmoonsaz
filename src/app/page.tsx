@@ -82,11 +82,13 @@ export default function LoginPage() {
             displayName: fullName,
         });
 
+        localStorage.setItem('userRole', selectedRole);
         toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
         router.push('/dashboard');
 
       } else { // Login mode
         await signInWithEmailAndPassword(auth, email, password);
+        localStorage.setItem('userRole', selectedRole);
         toast({ title: 'ورود موفق', description: 'خوش آمدید!' });
         router.push('/dashboard');
       }

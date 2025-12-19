@@ -1,9 +1,11 @@
 'use client';
 
 import Link from "next/link";
-import { BookOpen, User, LogOut, Edit } from "lucide-react";
+import { BookOpen, User, LogOut, Edit, GraduationCap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
+import { useState, useEffect, type ReactNode } from "react";
+
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -16,17 +18,26 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth, useUser } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
-import type { ReactNode } from "react";
+
+type Role = 'student' | 'teacher';
 
 const Header = ({ children }: { children?: ReactNode }) => {
   const { user } = useUser();
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [userRole, setUserRole] = useState<Role | null>(null);
+
+  useEffect(() => {
+    // This will only run on the client side
+    const role = localStorage.getItem('userRole') as Role;
+    setUserRole(role);
+  }, []);
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      localStorage.removeItem('userRole');
       router.push('/');
       toast({
         title: "خروج موفق",
@@ -41,6 +52,13 @@ const Header = ({ children }: { children?: ReactNode }) => {
       });
     }
   };
+  
+  const getAvatarIcon = () => {
+    if (userRole === 'student') {
+        return <GraduationCap />;
+    }
+    return <User />;
+  }
 
   return (
     <header className="sticky top-0 z-50">
@@ -52,7 +70,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
                       <span className="text-white font-medium">{user?.displayName ?? 'کاربر'}</span>
                       <Avatar>
                           <AvatarFallback>
-                              <User />
+                              {getAvatarIcon()}
                           </AvatarFallback>
                       </Avatar>
                     </DropdownMenuTrigger>
