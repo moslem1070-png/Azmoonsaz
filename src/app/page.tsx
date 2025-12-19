@@ -71,12 +71,6 @@ export default function LoginPage() {
             return;
         }
         
-        // Temporary signup for teacher
-        if(selectedRole === 'teacher' && nationalId !== '0025121531'){
-             toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت نام برای مدیر وجود ندارد.' });
-             setLoading(false);
-             return;
-        }
 
         await createUserWithEmailAndPassword(auth, email, password);
         toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
@@ -101,9 +95,9 @@ export default function LoginPage() {
   };
   
   const getTitle = () => {
-    // This is a temporary feature to allow the first teacher to sign up.
-    if(selectedRole === 'teacher' && authMode === 'signup') return 'ثبت‌نام مدیر / معلم';
-    if (selectedRole === 'teacher') return 'ورود مدیر / معلم';
+    if (selectedRole === 'teacher') {
+      return authMode === 'login' ? 'ورود مدیر / معلم' : 'ثبت‌نام مدیر / معلم';
+    }
     if (authMode === 'login') return 'ورود دانش‌آموز';
     return 'ثبت‌نام دانش‌آموز';
   };
@@ -125,7 +119,7 @@ export default function LoginPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-2">{getTitle()}</h1>
           <p className="text-muted-foreground">
-            {selectedRole === 'student' ? 'برای ادامه وارد شوید یا ثبت‌نام کنید.' : 'برای دسترسی به پنل خود وارد شوید.'}
+            {authMode === 'login' ? 'برای ادامه وارد شوید.' : 'برای ساخت حساب کاربری، فرم زیر را تکمیل کنید.'}
           </p>
         </div>
 
