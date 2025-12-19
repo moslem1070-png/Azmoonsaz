@@ -125,6 +125,12 @@ export default function LoginPage() {
 
     if (authMode === 'signup') {
       // --- SIGNUP LOGIC ---
+      if (selectedRole === 'teacher') {
+        toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت‌نام معلم از این طریق وجود ندارد.' });
+        setLoading(false);
+        return;
+      }
+
       const email = createEmail(nationalId, selectedRole);
       
       try {
@@ -140,7 +146,7 @@ export default function LoginPage() {
           nationalId: nationalId,
           firstName: fullName.split(' ')[0] || '',
           lastName: fullName.split(' ').slice(1).join(' ') || '',
-          role: selectedRole,
+          role: 'student', // Hardcode role to student on public signup
         };
         
         setDoc(userDocRef, newUserDoc).catch(serverError => {
@@ -161,12 +167,7 @@ export default function LoginPage() {
         toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
         
         localStorage.setItem('userRole', selectedRole);
-        
-        if (selectedRole === 'teacher') {
-            router.push('/dashboard/teacher');
-        } else {
-            router.push('/dashboard');
-        }
+        router.push('/dashboard');
 
       } catch(error: any) {
          console.error("Signup error:", error);
