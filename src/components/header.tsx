@@ -67,11 +67,11 @@ const Header = ({ children }: { children?: ReactNode }) => {
   return (
     <header className="sticky top-0 z-50">
         <div className="container mx-auto px-4">
-            <div className="mt-4 flex h-16 items-center justify-between rounded-[30px] border border-white/20 bg-white/10 px-6 backdrop-blur-lg">
+            <div className="mt-4 flex h-16 items-center justify-between rounded-[30px] border border-white/20 bg-white/10 px-4 sm:px-6 backdrop-blur-lg">
                 <div className="flex items-center gap-4">
                   <DropdownMenu>
                     <DropdownMenuTrigger className="flex items-center gap-2 outline-none">
-                      <span className="text-white font-medium">{user?.displayName ?? 'کاربر'}</span>
+                      <span className="text-white font-medium hidden sm:inline">{user?.displayName ?? 'کاربر'}</span>
                       <Avatar>
                           <AvatarFallback>
                               {getAvatarIcon()}
@@ -79,8 +79,8 @@ const Header = ({ children }: { children?: ReactNode }) => {
                       </Avatar>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>{user?.displayName}</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="sm:hidden">{user?.displayName}</DropdownMenuLabel>
+                      <DropdownMenuSeparator className="sm:hidden" />
                       <DropdownMenuItem onClick={() => router.push(getDashboardUrl())}>
                         <Home className="ml-2 h-4 w-4" />
                         <span>صفحه اصلی</span>
@@ -89,7 +89,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
                         <History className="ml-2 h-4 w-4" />
                         <span>کارنامه آزمون‌های قبلی</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push('/profile')}>
+                      <DropdownMenuItem onClick={() => {/* router.push('/profile') */}}>
                         <Edit className="ml-2 h-4 w-4" />
                         <span>ویرایش پروفایل</span>
                       </DropdownMenuItem>
@@ -103,7 +103,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
                    {children}
                 </div>
                 <Link href={getDashboardUrl()} className="flex items-center gap-3">
-                    <h1 className="text-xl font-bold text-white hidden sm:block">Persian QuizMaster</h1>
+                    <h1 className="text-lg sm:text-xl font-bold text-white">Persian QuizMaster</h1>
                     <div className="p-2 bg-primary/80 rounded-lg">
                         <BookOpen className="h-6 w-6 text-primary-foreground" />
                     </div>

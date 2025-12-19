@@ -39,6 +39,7 @@ export default function ExamPage() {
       });
     }, 1000);
     return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exam]);
 
   const progressValue = useMemo(() => {
@@ -91,12 +92,12 @@ export default function ExamPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen p-4 bg-gradient-to-br from-[#302851] to-[#1A162E]">
-      <GlassCard className="w-full max-w-4xl h-full max-h-[90vh] flex flex-col p-8">
+      <GlassCard className="w-full max-w-4xl h-full max-h-[95vh] sm:max-h-[90vh] flex flex-col p-4 sm:p-8">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold">{exam.title}</h1>
-            <div className="flex items-center gap-2 text-accent text-lg font-mono font-semibold">
+          <div className="flex flex-col-reverse sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <h1 className="text-xl sm:text-2xl font-bold self-end">{exam.title}</h1>
+            <div className="flex items-center gap-2 text-accent text-lg font-mono font-semibold self-start sm:self-center">
               <Clock className="w-6 h-6"/>
               <span>{formatTime(timeLeft)}</span>
             </div>
@@ -105,12 +106,12 @@ export default function ExamPage() {
         </div>
 
         {/* Body */}
-        <div className="flex-1 flex flex-col overflow-y-auto pr-4">
-          <h2 className="text-xl font-semibold mb-4">سوال {currentQuestionIndex + 1} از {exam.questions.length}</h2>
-          <p className="text-lg text-right mb-6 min-h-[60px]">{currentQuestion.text}</p>
+        <div className="flex-1 flex flex-col overflow-y-auto pr-2 sm:pr-4">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4">سوال {currentQuestionIndex + 1} از {exam.questions.length}</h2>
+          <p className="text-md sm:text-lg text-right mb-6 min-h-[60px]">{currentQuestion.text}</p>
           
           {placeholderImage && (
-            <div className="relative w-full h-64 mb-6 rounded-2xl overflow-hidden">
+            <div className="relative w-full h-48 sm:h-64 mb-6 rounded-2xl overflow-hidden">
                 <Image src={placeholderImage} alt={`Question ${currentQuestion.id}`} fill objectFit="cover" data-ai-hint="question illustration" />
             </div>
           )}
@@ -119,15 +120,15 @@ export default function ExamPage() {
             dir="rtl"
             value={String(selectedAnswers[currentQuestion.id])}
             onValueChange={(value) => handleAnswerSelect(currentQuestion.id, Number(value))}
-            className="space-y-4"
+            className="space-y-3 sm:space-y-4"
           >
             {currentQuestion.options.map((option, index) => (
               <GlassCard
                 key={index}
-                className={`flex items-center space-x-reverse space-x-3 p-4 transition-all duration-300 ${selectedAnswers[currentQuestion.id] === index ? 'border-primary' : ''}`}
+                className={`flex items-center space-x-reverse space-x-3 p-3 sm:p-4 transition-all duration-300 ${selectedAnswers[currentQuestion.id] === index ? 'border-primary' : ''}`}
               >
                 <RadioGroupItem value={String(index)} id={`q${currentQuestion.id}-o${index}`} />
-                <Label htmlFor={`q${currentQuestion.id}-o${index}`} className="flex-1 text-base cursor-pointer">
+                <Label htmlFor={`q${currentQuestion.id}-o${index}`} className="flex-1 text-sm sm:text-base cursor-pointer">
                   {option}
                 </Label>
               </GlassCard>
@@ -139,17 +140,17 @@ export default function ExamPage() {
         <div className="mt-8 pt-6 border-t border-white/10 flex justify-between items-center">
           <Button variant="outline" onClick={handlePrev} disabled={currentQuestionIndex === 0} className="gap-2">
             <ArrowRight className="w-4 h-4" />
-            <span>سوال قبلی</span>
+            <span>قبلی</span>
           </Button>
 
           {currentQuestionIndex === exam.questions.length - 1 ? (
              <Button onClick={finishExam} className="bg-primary/80 hover:bg-primary gap-2">
                 <Check className="w-4 h-4" />
-                <span>پایان آزمون</span>
+                <span>پایان</span>
             </Button>
           ) : (
             <Button onClick={handleNext} className="gap-2">
-                <span>سوال بعدی</span>
+                <span>بعدی</span>
                 <ArrowLeft className="w-4 h-4" />
             </Button>
           )}

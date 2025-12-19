@@ -35,13 +35,13 @@ export default function TeacherDashboardPage() {
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="container mx-auto px-4 py-8 flex-1">
-        <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-right">داشبورد مدیر</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-right">داشبورد مدیر</h1>
              <TeacherActionButtons />
         </div>
 
-        <GlassCard className="p-8">
-            <h2 className="text-2xl font-bold mb-4">خوش آمدید، {user.displayName}!</h2>
+        <GlassCard className="p-6 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4">خوش آمدید، {user.displayName}!</h2>
             <p className="text-muted-foreground">
                 از این پنل می‌توانید آزمون‌های جدید ایجاد کنید، آزمون‌های موجود را مدیریت کنید و نتایج دانش‌آموزان را مشاهده نمایید.
             </p>

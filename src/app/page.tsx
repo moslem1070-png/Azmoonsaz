@@ -49,10 +49,9 @@ export default function LoginPage() {
 
   const handleRoleChange = (role: Role) => {
     setSelectedRole(role);
-    if (role === 'teacher') {
-      setAuthMode('login');
-    }
+    setAuthMode('login'); // Always default to login when role changes
   };
+  
 
   const handleAuthSubmission = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,12 +68,6 @@ export default function LoginPage() {
     try {
       let userCredential;
       if (authMode === 'signup') {
-        if (selectedRole === 'teacher') {
-           toast({ variant: 'destructive', title: 'خطا', description: 'ثبت‌نام برای مدیران امکان‌پذیر نیست.' });
-           setLoading(false);
-           return;
-        }
-
         if (password !== confirmPassword) {
           toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور و تکرار آن یکسان نیستند.' });
           setLoading(false);
@@ -242,7 +235,7 @@ export default function LoginPage() {
         {selectedRole === 'student' && (
           <div className="flex items-center justify-center space-x-reverse space-x-2">
               <Button
-                variant={authMode === 'login' ? 'ghost' : 'link'}
+                variant="link"
                 onClick={() => setAuthMode('login')}
                 className={cn(
                   'text-muted-foreground transition-colors',
@@ -253,7 +246,7 @@ export default function LoginPage() {
               </Button>
               <div className="h-4 w-px bg-border"></div>
               <Button
-                variant={authMode === 'signup' ? 'ghost' : 'link'}
+                variant="link"
                 onClick={() => setAuthMode('signup')}
                 className={cn(
                   'text-muted-foreground transition-colors',

@@ -95,13 +95,13 @@ export default function ResultsPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen p-4 bg-gradient-to-br from-[#302851] to-[#1A162E]">
-      <GlassCard className="w-full max-w-3xl p-8 text-center">
-        <h1 className="text-3xl font-bold mb-2">کارنامه آزمون</h1>
-        <p className="text-lg text-muted-foreground mb-8">{exam.title}</p>
+      <GlassCard className="w-full max-w-3xl p-6 sm:p-8 text-center">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">کارنامه آزمون</h1>
+        <p className="text-md sm:text-lg text-muted-foreground mb-8">{exam.title}</p>
 
         <div className="grid md:grid-cols-2 gap-8 items-center">
           <div className="flex flex-col items-center justify-center">
-            <div className="relative w-48 h-48">
+            <div className="relative w-40 h-40 sm:w-48 sm:h-48">
                 <svg className="w-full h-full" viewBox="0 0 36 36">
                     <path
                         className="text-white/10"
@@ -121,7 +121,7 @@ export default function ResultsPage() {
                     />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-5xl font-bold">{results.score}</span>
+                    <span className="text-4xl sm:text-5xl font-bold">{results.score}</span>
                     <span className="text-muted-foreground">امتیاز</span>
                 </div>
             </div>
@@ -130,16 +130,16 @@ export default function ResultsPage() {
               <GlassCard className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                       <CheckCircle className="w-6 h-6 text-green-400" />
-                      <span className="text-lg">پاسخ‌های صحیح</span>
+                      <span className="text-md sm:text-lg">پاسخ‌های صحیح</span>
                   </div>
-                  <span className="text-xl font-bold">{results.correct}</span>
+                  <span className="text-lg sm:text-xl font-bold">{results.correct}</span>
               </GlassCard>
               <GlassCard className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                       <XCircle className="w-6 h-6 text-red-500" />
-                      <span className="text-lg">پاسخ‌های غلط</span>
+                      <span className="text-md sm:text-lg">پاسخ‌های غلط</span>
                   </div>
-                  <span className="text-xl font-bold">{results.incorrect}</span>
+                  <span className="text-lg sm:text-xl font-bold">{results.incorrect}</span>
               </GlassCard>
           </div>
         </div>
