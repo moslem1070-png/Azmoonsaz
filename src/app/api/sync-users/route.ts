@@ -5,16 +5,18 @@ import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// Helper function to initialize Firebase Admin SDK
+// Helper function to initialize Firebase Admin SDK, ensuring it's only called when needed.
 function initializeAdminApp(): App {
   const apps = getApps();
   if (apps.length) {
     return apps[0];
   }
   
+  // This check is critical. The key must be present.
   const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (!serviceAccountKey) {
-    throw new Error('The FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. Cannot initialize Firebase Admin SDK.');
+    // This specific error message will be caught and shown to the user.
+    throw new Error('پیکربندی سمت سرور ناقص است. متغیر FIREBASE_SERVICE_ACCOUNT_KEY تنظیم نشده است.');
   }
 
   try {
@@ -23,7 +25,8 @@ function initializeAdminApp(): App {
         credential: cert(credentials),
      });
   } catch (error: any) {
-    throw new Error(`Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY: ${error.message}`);
+    // This catches errors from JSON.parse if the key is malformed.
+    throw new Error(`Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it is a valid JSON string. Error: ${error.message}`);
   }
 }
 
@@ -72,11 +75,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('Error in sync-users API:', error);
-    // Provide a more user-friendly error message based on the error type
-    const userFriendlyMessage = error.message.includes('FIREBASE_SERVICE_ACCOUNT_KEY')
-        ? 'پیکربندی سمت سرور ناقص است. متغیر FIREBASE_SERVICE_ACCOUNT_KEY تنظیم نشده است.'
-        : 'یک خطای داخلی در سرور رخ داد. لطفا دوباره تلاش کنید.';
-        
-    return NextResponse.json({ error: userFriendlyMessage }, { status: 500 });
+    // The message thrown from initializeAdminApp will be passed through here.
+    return NextResponse.json({ error: error.message || 'یک خطای داخلی ناشناخته در سرور رخ داد.' }, { status: 500 });
   }
 }

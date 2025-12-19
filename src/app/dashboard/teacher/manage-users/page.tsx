@@ -30,10 +30,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { User as AppUser } from '@/lib/types';
 
 
 type Role = 'student' | 'teacher';
+
+// This is a simple check to see if we're in an environment where server-side functions MIGHT be available.
+// In a real production environment, you might have a more robust way to check this.
+const isServerFunctionalityEnabled = !!process.env.NEXT_PUBLIC_ENABLE_ADMIN_FUNCTIONS || process.env.NODE_ENV !== 'production';
 
 export default function ManageUsersPage() {
   const router = useRouter();
@@ -107,6 +112,7 @@ export default function ManageUsersPage() {
         const result = await response.json();
 
         if (!response.ok) {
+            // Use the specific error message from the API, or a fallback.
             throw new Error(result.error || 'خطایی در سرور رخ داد.');
         }
 
@@ -148,6 +154,52 @@ export default function ManageUsersPage() {
         return 'نامشخص';
     }
   }
+  
+  const OrphanedUsersButton = () => {
+      const button = (
+         <Button variant="outline" size="sm" disabled={isSyncing || !isServerFunctionalityEnabled}>
+            {isSyncing ? <RefreshCw className="ml-2 h-4 w-4 animate-spin" /> : <Trash2 className="ml-2 h-4 w-4" />}
+            {isSyncing ? 'در حال پردازش...' : 'حذف کاربران سرگردان'}
+         </Button>
+      )
+
+      if (isServerFunctionalityEnabled) {
+          return (
+             <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    {button}
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>آیا از حذف کاربران سرگردان مطمئن هستید؟</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          این عمل تمام کاربرانی که در سیستم احراز هویت وجود دارند اما در پایگاه داده پروفایلی برایشان ثبت نشده را برای همیشه حذف می‌کند. این عمل غیرقابل بازگشت است.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>انصراف</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteOrphanedUsers} disabled={isSyncing}>
+                          بله، حذف کن
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+          )
+      }
+
+      return (
+         <Tooltip>
+            <TooltipTrigger asChild>
+                {/* A div is needed to wrap the disabled button for Tooltip to work */}
+                <div>{button}</div>
+            </TooltipTrigger>
+            <TooltipContent>
+                <p>برای فعالسازی، متغیر FIREBASE_SERVICE_ACCOUNT_KEY باید تنظیم شود.</p>
+            </TooltipContent>
+         </Tooltip>
+      )
+  }
+
 
   const isLoading = isUserLoading || (usersLoading && userRole === 'teacher');
 
@@ -181,32 +233,12 @@ export default function ManageUsersPage() {
                 <UserPlus className="ml-2 h-4 w-4" />
                 ایجاد کاربر جدید
             </Button>
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm" disabled={isSyncing}>
-                        {isSyncing ? <RefreshCw className="ml-2 h-4 w-4 animate-spin" /> : <Trash2 className="ml-2 h-4 w-4" />}
-                        {isSyncing ? 'در حال پردازش...' : 'حذف کاربران سرگردان'}
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>آیا از حذف کاربران سرگردان مطمئن هستید؟</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          این عمل تمام کاربرانی که در سیستم احراز هویت وجود دارند اما در پایگاه داده پروفایلی برایشان ثبت نشده را برای همیشه حذف می‌کند. این عمل غیرقابل بازگشت است.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>انصراف</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteOrphanedUsers} disabled={isSyncing}>
-                          بله، حذف کن
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <OrphanedUsersButton />
           </div>
         </div>
 
         <GlassCard className="p-4 sm:p-6">
+          {error && <p className='text-destructive text-center p-4'>خطا در بارگذاری کاربران: {error.message}</p>}
           {users && users.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
