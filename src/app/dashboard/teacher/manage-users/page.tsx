@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ArrowRight, Trash2 } from 'lucide-react';
+import { ArrowRight, Trash2, Eye } from 'lucide-react';
 import { collection, deleteDoc, doc } from 'firebase/firestore';
 
 import Header from '@/components/header';
@@ -42,20 +42,13 @@ export default function ManageUsersPage() {
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<Role | null>(null);
 
-  // Fetch all users from Firestore only if the user is a teacher
   const usersCollection = useMemoFirebase(
-    () => {
-        if (firestore && userRole === 'teacher') {
-            return collection(firestore, 'users');
-        }
-        return null;
-    },
-    [firestore, userRole]
+    () => (firestore ? collection(firestore, 'users') : null),
+    [firestore]
   );
   const { data: users, isLoading: usersLoading, error } = useCollection<AppUser>(usersCollection);
 
   useEffect(() => {
-    // This will only run on the client side
     const role = localStorage.getItem('userRole') as Role;
     setUserRole(role);
 
@@ -76,8 +69,6 @@ export default function ManageUsersPage() {
         return;
     }
     
-    // Note: This only deletes the Firestore document. The Auth user remains.
-    // The user should manually delete them from the Firebase Console.
     try {
         await deleteDoc(doc(firestore, 'users', userId));
         toast({
@@ -115,6 +106,11 @@ export default function ManageUsersPage() {
         return 'نامشخص';
     }
   }
+
+  const handleViewUser = (userId: string) => {
+    router.push(`/dashboard/teacher/user-details/${userId}`);
+  };
+
 
   const isLoading = isUserLoading || (usersLoading && userRole === 'teacher');
 
@@ -162,7 +158,7 @@ export default function ManageUsersPage() {
                 </TableHeader>
                 <TableBody>
                   {users.map((u: AppUser) => (
-                    <TableRow key={u.id}>
+                    <TableRow key={u.id} className="cursor-pointer hover:bg-white/10" onClick={() => handleViewUser(u.id)}>
                       <TableCell className="font-medium text-right">{`${u.firstName} ${u.lastName}`}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant={getRoleBadgeVariant(u.role as Role)}>
@@ -171,11 +167,15 @@ export default function ManageUsersPage() {
                       </TableCell>
                       <TableCell className="text-right hidden sm:table-cell text-muted-foreground">{u.nationalId}</TableCell>
                       <TableCell className="text-left">
-                        {u.id !== user.uid && (
-                          <div className="flex gap-2 justify-end">
+                        <div className="flex gap-2 justify-end">
+                           <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleViewUser(u.id); }}>
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">مشاهده</span>
+                            </Button>
+                          {u.id !== user.uid && (
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" size="icon" className="h-8 w-8">
+                                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                                         <Trash2 className="h-4 w-4" />
                                         <span className="sr-only">حذف</span>
                                     </Button>
@@ -195,9 +195,9 @@ export default function ManageUsersPage() {
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
-                          </div>
-                        )}
-                        {u.id === user.uid && (<span className="text-xs text-muted-foreground">شما</span>)}
+                          )}
+                          {u.id === user.uid && (<div className="w-8"></div>)}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
