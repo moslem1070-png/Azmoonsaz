@@ -33,7 +33,8 @@ type FormData = z.infer<typeof formSchema>;
 type Role = 'student' | 'teacher' | 'manager';
 
 const createEmailFromUsername = (username: string, role: Role) => {
-    return `${role}-${username}@quizmaster.com`;
+    const rolePrefix = role === 'manager' ? 'teacher' : role;
+    return `${rolePrefix}-${username}@quizmaster.com`;
 }
 
 export default function CreateUserForm() {

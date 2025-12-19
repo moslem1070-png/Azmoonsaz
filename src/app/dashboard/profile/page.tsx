@@ -38,6 +38,14 @@ const formSchema = z.object({
 }, {
     message: 'برای تنظیم رمز عبور جدید، باید رمز عبور فعلی را وارد کنید.',
     path: ['oldPassword'],
+}).refine(data => {
+    if (data.newPassword) {
+        return data.newPassword.length >= 6;
+    }
+    return true;
+}, {
+    message: 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.',
+    path: ['newPassword'],
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -103,11 +111,6 @@ export default function ProfilePage() {
 
             // Update password if fields are filled
             if (data.newPassword && data.oldPassword) {
-                 if (data.newPassword.length < 6) {
-                    toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.' });
-                    setLoading(false);
-                    return;
-                }
                 const credential = EmailAuthProvider.credential(user.email, data.oldPassword);
                 await reauthenticateWithCredential(user, credential);
                 await updatePassword(user, data.newPassword);
@@ -120,6 +123,7 @@ export default function ProfilePage() {
             console.error("Profile update error:", error);
             const errorMessage = 
                 error.code === 'auth/wrong-password' ? 'رمز عبور فعلی اشتباه است.' :
+                error.code === 'auth/weak-password' ? 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.' :
                 'خطایی در به‌روزرسانی اطلاعات رخ داد.';
             toast({ variant: 'destructive', title: 'خطا', description: errorMessage });
         } finally {
@@ -202,7 +206,7 @@ export default function ProfilePage() {
                                         <div className="relative">
                                             <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                             <FormControl>
-                                                <Input type="password" placeholder="رمز عبور جدید" {...field} className="pl-10 text-right" />
+                                                <Input type="password" placeholder="رمز عبور جدید (حداقل ۶ کاراکتر)" {...field} className="pl-10 text-right" />
                                             </FormControl>
                                         </div>
                                         <FormMessage />
