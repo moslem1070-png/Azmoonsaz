@@ -36,6 +36,8 @@ export default function LoginPage() {
   
   const isNationalIdLengthValid = useMemo(() => nationalId.length === 10, [nationalId]);
   const isNationalIdNumeric = useMemo(() => /^\d*$/.test(nationalId), [nationalId]);
+  const isPasswordLengthValid = useMemo(() => password.length >= 8, [password]);
+
 
   const nationalIdError = useMemo(() => {
     if (selectedRole === 'student' && nationalId.length > 0) {
@@ -44,6 +46,13 @@ export default function LoginPage() {
     }
     return null;
   }, [selectedRole, nationalId, isNationalIdLengthValid, isNationalIdNumeric]);
+
+  const passwordError = useMemo(() => {
+    if (authMode === 'signup' && password.length > 0 && !isPasswordLengthValid) {
+        return "رمز عبور باید حداقل ۸ کاراکتر باشد.";
+    }
+    return null;
+  }, [authMode, password, isPasswordLengthValid]);
 
 
   useEffect(() => {
@@ -126,6 +135,11 @@ export default function LoginPage() {
     try {
       let userCredential;
       if (authMode === 'signup') {
+        if (!isPasswordLengthValid) {
+            toast({ variant: 'destructive', title: 'خطا', description: passwordError });
+            setLoading(false);
+            return;
+        }
         if (password !== confirmPassword) {
           toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور و تکرار آن یکسان نیستند.' });
           setLoading(false);
@@ -191,6 +205,11 @@ export default function LoginPage() {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
   }
 
+  const isSignupButtonDisabled = () => {
+    if (authMode !== 'signup') return false;
+    return loading || !!nationalIdError || !!passwordError;
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#302851] to-[#1A162E] p-4">
       <GlassCard className="w-full max-w-md p-8 space-y-8 min-h-[500px] sm:min-h-0 flex flex-col justify-center">
@@ -251,7 +270,7 @@ export default function LoginPage() {
               
               <div>
                 <div className="relative">
-                  <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Fingerprint className="absolute left-3 top-2.5 w-5 h-5 text-muted-foreground" />
                   <Input 
                     type="text" 
                     placeholder={selectedRole === 'teacher' ? "نام کاربری مدیر" : "کد ملی"}
@@ -270,16 +289,24 @@ export default function LoginPage() {
                 )}
               </div>
 
-              <div className="relative">
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input 
-                  type="password" 
-                  placeholder="رمز عبور" 
-                  className="pl-10 text-right" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+              <div>
+                <div className="relative">
+                    <Key className="absolute left-3 top-2.5 w-5 h-5 text-muted-foreground" />
+                    <Input 
+                    type="password" 
+                    placeholder="رمز عبور" 
+                    className={cn(
+                        "pl-10 text-right",
+                        passwordError && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
+                    )}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    />
+                </div>
+                {passwordError && (
+                    <p className="text-xs text-muted-foreground mt-1.5 text-right">{passwordError}</p>
+                )}
               </div>
 
               {authMode === 'signup' && selectedRole === 'student' && (
@@ -288,14 +315,17 @@ export default function LoginPage() {
                   <Input 
                     type="password" 
                     placeholder="تکرار رمز عبور" 
-                    className="pl-10 text-right" 
+                     className={cn(
+                        "pl-10 text-right",
+                        passwordError && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
+                    )}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                   />
                 </div>
               )}
-              <Button type="submit" className="w-full bg-primary/80 hover:bg-primary" disabled={loading || (selectedRole === 'student' && !!nationalIdError)}>
+              <Button type="submit" className="w-full bg-primary/80 hover:bg-primary" disabled={loading || (selectedRole === 'student' && (!!nationalIdError || (authMode === 'signup' && !!passwordError)))}>
                 {loading ? 'در حال پردازش...' : (authMode === 'login' ? 'ورود' : 'ایجاد حساب')}
                 {!loading && <ArrowRight className="mr-2 h-4 w-4" />}
               </Button>
