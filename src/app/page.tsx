@@ -106,12 +106,7 @@ export default function LoginPage() {
 
     try {
       if (authMode === 'signup') {
-        // --- SIGNUP LOGIC (Student only) ---
-         if (selectedRole === 'teacher') {
-            toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت‌نام برای مدیر یا معلم وجود ندارد.' });
-            setLoading(false);
-            return;
-        }
+        // --- SIGNUP LOGIC ---
         if (passwordError) {
             toast({ variant: 'destructive', title: 'خطا', description: passwordError });
             setLoading(false);
@@ -128,14 +123,19 @@ export default function LoginPage() {
             return;
         }
 
-        const email = createEmailFromNationalId(nationalId, 'student');
+        const email = createEmailFromNationalId(nationalId, selectedRole, selectedRole === 'teacher' ? teacherSubRole : undefined);
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
         await updateProfile(userCredential.user, { displayName: fullName });
 
         toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
-        localStorage.setItem('userRole', 'student');
-        router.push('/dashboard');
+        localStorage.setItem('userRole', selectedRole);
+        
+        if (selectedRole === 'teacher') {
+            router.push('/dashboard/teacher');
+        } else {
+            router.push('/dashboard');
+        }
 
       } else {
         // --- LOGIN LOGIC ---
@@ -191,7 +191,7 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error(error);
        const errorMessage =
-        error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلا ثبت‌نام کرده است.' :
+        error.code === 'auth/email-already-in-use' ? 'این نام کاربری/کد ملی قبلا ثبت‌نام کرده است.' :
         'خطایی در هنگام پردازش درخواست شما رخ داد.';
       toast({ variant: 'destructive', title: 'خطا', description: errorMessage });
     } finally {
@@ -203,7 +203,7 @@ export default function LoginPage() {
     if (authMode === 'login') {
       return selectedRole === 'teacher' ? 'ورود مدیر / معلم' : 'ورود دانش‌آموز';
     }
-    return 'ثبت‌نام دانش‌آموز';
+    return selectedRole === 'teacher' ? 'ثبت‌نام مدیر / معلم' : 'ثبت‌نام دانش‌آموز';
   };
 
   const formVariants = {
@@ -259,9 +259,10 @@ export default function LoginPage() {
             transition={{ duration: 0.3 }}
           >
             <form className="space-y-6" onSubmit={handleAuthSubmission}>
-              {selectedRole === 'teacher' && authMode === 'login' && (
+              {selectedRole === 'teacher' && (
                 <RadioGroup
                   defaultValue="manager"
+                  value={teacherSubRole}
                   onValueChange={(value: TeacherSubRole) => setTeacherSubRole(value)}
                   className="flex justify-center gap-x-6"
                   dir="rtl"
@@ -354,31 +355,29 @@ export default function LoginPage() {
           </motion.div>
         </AnimatePresence>
 
-        {selectedRole === 'student' && (
-          <div className="flex items-center justify-center space-x-reverse space-x-2">
-              <Button
-                variant="link"
-                onClick={() => setAuthMode('login')}
-                className={cn(
-                  'text-muted-foreground transition-colors',
-                  authMode === 'login' && 'font-bold text-accent'
-                )}
-              >
-                ورود
-              </Button>
-              <div className="h-4 w-px bg-border"></div>
-              <Button
-                variant="link"
-                onClick={() => setAuthMode('signup')}
-                className={cn(
-                  'text-muted-foreground transition-colors',
-                  authMode === 'signup' && 'font-bold text-accent'
-                )}
-              >
-                ثبت‌نام
-              </Button>
-          </div>
-        )}
+        <div className="flex items-center justify-center space-x-reverse space-x-2">
+            <Button
+              variant="link"
+              onClick={() => setAuthMode('login')}
+              className={cn(
+                'text-muted-foreground transition-colors',
+                authMode === 'login' && 'font-bold text-accent'
+              )}
+            >
+              ورود
+            </Button>
+            <div className="h-4 w-px bg-border"></div>
+            <Button
+              variant="link"
+              onClick={() => setAuthMode('signup')}
+              className={cn(
+                'text-muted-foreground transition-colors',
+                authMode === 'signup' && 'font-bold text-accent'
+              )}
+            >
+              ثبت‌نام
+            </Button>
+        </div>
 
       </GlassCard>
     </div>
