@@ -84,7 +84,7 @@ export default function ManageUsersPage() {
         await deleteDoc(doc(firestore, 'users', userId));
         toast({
             title: 'موفق',
-            description: 'کاربر با موفقیت از پایگاه داده حذف شد. برای حذف کامل از سیستم احراز هویت، نیاز به عملیات سمت سرور است.',
+            description: 'کاربر با موفقیت از پایگاه داده حذف شد. برای حذف کامل از سیستم احراز هویت، از گزینه "حذف کاربران سرگردان" استفاده کنید.',
         });
     } catch(error) {
         console.error('Error deleting user:', error);
@@ -95,6 +95,37 @@ export default function ManageUsersPage() {
         });
     }
   };
+  
+  const handleDeleteOrphanedUsers = async () => {
+    setIsSyncing(true);
+    toast({ title: 'شروع عملیات...', description: 'در حال شناسایی و حذف کاربران سرگردان...' });
+    try {
+        const response = await fetch('/api/sync-users', {
+            method: 'POST',
+        });
+        
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'خطایی در سرور رخ داد.');
+        }
+
+        toast({
+            title: 'عملیات موفق',
+            description: result.message,
+        });
+
+    } catch (error: any) {
+        console.error('Failed to delete orphaned users:', error);
+        toast({
+            variant: 'destructive',
+            title: 'خطا در حذف کاربران سرگردان',
+            description: error.message || 'مشکلی در ارتباط با سرور پیش آمد.',
+        });
+    } finally {
+        setIsSyncing(false);
+    }
+};
 
   const getRoleBadgeVariant = (role: Role) => {
     switch (role) {
@@ -141,7 +172,7 @@ export default function ManageUsersPage() {
       <main className="container mx-auto px-4 py-8 flex-1">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-right">مدیریت کاربران</h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
             <Button variant="ghost" size="sm" onClick={() => router.back()}>
               <ArrowRight className="ml-2 h-4 w-4" />
               بازگشت
@@ -149,7 +180,29 @@ export default function ManageUsersPage() {
             <Button size="sm" onClick={() => router.push('/dashboard/teacher/create-user')}>
                 <UserPlus className="ml-2 h-4 w-4" />
                 ایجاد کاربر جدید
-              </Button>
+            </Button>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={isSyncing}>
+                        {isSyncing ? <RefreshCw className="ml-2 h-4 w-4 animate-spin" /> : <Trash2 className="ml-2 h-4 w-4" />}
+                        {isSyncing ? 'در حال پردازش...' : 'حذف کاربران سرگردان'}
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>آیا از حذف کاربران سرگردان مطمئن هستید؟</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          این عمل تمام کاربرانی که در سیستم احراز هویت وجود دارند اما در پایگاه داده پروفایلی برایشان ثبت نشده را برای همیشه حذف می‌کند. این عمل غیرقابل بازگشت است.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>انصراف</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteOrphanedUsers} disabled={isSyncing}>
+                          بله، حذف کن
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 
@@ -176,7 +229,7 @@ export default function ManageUsersPage() {
                       </TableCell>
                       <TableCell className="text-right hidden sm:table-cell text-muted-foreground">{u.nationalId}</TableCell>
                       <TableCell className="text-left">
-                        {u.id !== user.uid && u.role === 'student' && (
+                        {u.id !== user.uid && (
                           <div className="flex gap-2 justify-end">
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -189,7 +242,7 @@ export default function ManageUsersPage() {
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>آیا از حذف این کاربر مطمئن هستید؟</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                        این عمل کاربر را از پایگاه داده حذف می‌کند اما حساب احراز هویت او باقی می‌ماند. این عمل غیرقابل بازگشت است.
+                                        این عمل کاربر را فقط از پایگاه داده حذف می‌کند اما حساب احراز هویت او باقی می‌ماند. این عمل غیرقابل بازگشت است.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -203,7 +256,6 @@ export default function ManageUsersPage() {
                           </div>
                         )}
                         {u.id === user.uid && (<span className="text-xs text-muted-foreground">شما</span>)}
-                        {u.role !== 'student' && (<span className="text-xs text-muted-foreground">-</span>)}
                       </TableCell>
                     </TableRow>
                   ))}
