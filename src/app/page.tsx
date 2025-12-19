@@ -273,7 +273,7 @@ export default function LoginPage() {
                   <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input 
                     type="text" 
-                    placeholder={selectedRole === 'teacher' ? "نام کاربری مدیر" : "کد ملی"}
+                    placeholder={selectedRole === 'teacher' ? "نام کاربری" : "کد ملی"}
                     className={cn(
                       "pl-10 text-right",
                       nationalIdError && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
