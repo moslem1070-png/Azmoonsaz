@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { BookOpen, User, LogOut, Edit, GraduationCap } from "lucide-react";
+import { BookOpen, User, LogOut, Edit, GraduationCap, Home, History } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { useState, useEffect, type ReactNode } from "react";
@@ -77,10 +77,19 @@ const Header = ({ children }: { children?: ReactNode }) => {
                     <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuLabel>{user?.displayName}</DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                        <Home className="ml-2 h-4 w-4" />
+                        <span>صفحه اصلی</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push('/dashboard#exam-history')}>
+                        <History className="ml-2 h-4 w-4" />
+                        <span>کارنامه آزمون‌های قبلی</span>
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/profile')}>
                         <Edit className="ml-2 h-4 w-4" />
                         <span>ویرایش پروفایل</span>
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="ml-2 h-4 w-4" />
                         <span>خروج</span>
