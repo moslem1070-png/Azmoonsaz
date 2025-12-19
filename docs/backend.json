@@ -1,0 +1,256 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the Persian QuizMaster application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user (e.g., 'admin', 'teacher', 'student')."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The user's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The user's last name."
+        }
+      },
+      "required": [
+        "id",
+        "role",
+        "email",
+        "firstName",
+        "lastName"
+      ]
+    },
+    "Exam": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Exam",
+      "type": "object",
+      "description": "Represents an exam in the Persian QuizMaster application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Exam entity."
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to Teacher. (Relationship: Teacher 1:N Exam)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the exam."
+        },
+        "coverImageURL": {
+          "type": "string",
+          "description": "URL of the cover image for the exam.",
+          "format": "uri"
+        },
+        "difficulty": {
+          "type": "string",
+          "description": "The difficulty level of the exam (e.g., 'Easy', 'Medium', 'Hard')."
+        },
+        "timer": {
+          "type": "number",
+          "description": "The time limit for the exam, in seconds."
+        }
+      },
+      "required": [
+        "id",
+        "teacherId",
+        "title",
+        "coverImageURL",
+        "difficulty",
+        "timer"
+      ]
+    },
+    "Question": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Question",
+      "type": "object",
+      "description": "Represents a question in an exam.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Question entity."
+        },
+        "examId": {
+          "type": "string",
+          "description": "Reference to Exam. (Relationship: Exam 1:N Question)"
+        },
+        "text": {
+          "type": "string",
+          "description": "The text of the question."
+        },
+        "imageURL": {
+          "type": "string",
+          "description": "URL of the image for the question (optional).",
+          "format": "uri"
+        },
+        "correctAnswer": {
+          "type": "string",
+          "description": "The correct answer for the question."
+        },
+        "options": {
+          "type": "array",
+          "description": "The options for the question.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "examId",
+        "text",
+        "correctAnswer",
+        "options"
+      ]
+    },
+    "ExamResult": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ExamResult",
+      "type": "object",
+      "description": "Represents the results of a student taking an exam.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ExamResult entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N ExamResult)"
+        },
+        "examId": {
+          "type": "string",
+          "description": "Reference to Exam. (Relationship: Exam 1:N ExamResult)"
+        },
+        "scorePercentage": {
+          "type": "number",
+          "description": "The student's score as a percentage (0-100)."
+        },
+        "correctness": {
+          "type": "number",
+          "description": "The number of questions answered correctly."
+        },
+        "submissionTime": {
+          "type": "string",
+          "description": "The date and time when the exam was submitted.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "examId",
+        "scorePercentage",
+        "correctness",
+        "submissionTime"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Uses path-based ownership for private user data. This ensures that only the authenticated user (or an admin) can access their profile.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/exams/{examId}",
+        "definition": {
+          "entityName": "Exam",
+          "schema": {
+            "$ref": "#/backend/entities/Exam"
+          },
+          "description": "Stores exams created by teachers. The path includes the teacher's userId, enforcing ownership and simplifying security rules.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the teacher (user)."
+            },
+            {
+              "name": "examId",
+              "description": "The unique ID of the exam."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/exams/{examId}/questions/{questionId}",
+        "definition": {
+          "entityName": "Question",
+          "schema": {
+            "$ref": "#/backend/entities/Question"
+          },
+          "description": "Stores questions associated with a specific exam. Uses a hierarchical path to associate questions with their parent exam and teacher, ensuring proper ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the teacher (user)."
+            },
+            {
+              "name": "examId",
+              "description": "The unique ID of the exam."
+            },
+            {
+              "name": "questionId",
+              "description": "The unique ID of the question."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/examResults/{examResultId}",
+        "definition": {
+          "entityName": "ExamResult",
+          "schema": {
+            "$ref": "#/backend/entities/ExamResult"
+          },
+          "description": "Stores exam results for students. Path-based ownership ensures that only the student (or an admin) can access their results.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the student (user)."
+            },
+            {
+              "name": "examResultId",
+              "description": "The unique ID of the exam result."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support the Persian QuizMaster application with a focus on authorization independence, clarity, and scalability.  The structure leverages path-based ownership for user-related data and a dedicated collection for global roles.  Authorization independence is achieved by structuring data such that security rules do not rely on hierarchical `get()` calls. This is accomplished via path-based ownership.\n\n**Explanation of Authorization Independence:**\nUser data and related entities (exams, questions, results) are organized under the `/users/{userId}` path, ensuring clear ownership and simplifying security rules. Because the path inherently defines ownership, no additional data needs to be read from parent documents to determine authorization. For collaborative data involving multiple users, a membership map (`members`) can be added to relevant documents, if required in future features.\n\n**Support for QAPs (Rules are not Filters):**\n\nPath-based ownership `/users/{userId}/exams` supports secure `list` operations. Security rules can efficiently filter the results based on the `userId` in the path without needing to inspect the contents of each exam document.\n\n**Additional Considerations**\n\n*   The design assumes user roles (admin, teacher, student) are managed at the authentication level. If roles need to be dynamically managed within the application, consider a dedicated `/roles/{userId}` collection."
+  }
+}

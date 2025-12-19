@@ -1,0 +1,123 @@
+/**
+ * This ruleset enforces a strict user-ownership model for the Persian QuizMaster application.
+ * All user-generated content, including exams, questions, and results, is stored in subcollections
+ * under the user's primary document. This architecture provides strong security by default,
+ * ensuring users can only access their own data tree.
+ *
+ * Core Philosophy:
+ * Access control is based on the user's authenticated UID matching the `{userId}` wildcard in the document path.
+ * This path-based ownership strategy is simple, performant, and avoids complex, slow, or costly
+ * cross-document reads (`get()`) for authorization decisions.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores the user's profile.
+ * - /users/{userId}/exams/{examId}: Stores exams created by a teacher.
+ * - /users/{userId}/exams/{examId}/questions/{questionId}: Stores questions for a specific exam.
+ * - /users/{userId}/examResults/{examResultId}: Stores a student's results for an exam they have taken.
+ *
+ * Key Security Decisions:
+ * - Default Deny: All paths are closed by default. Access is only granted explicitly.
+ * - No User Listing: It is not possible for any user to list all documents in the top-level `/users` collection.
+ * - Owner-Only Access: All data within `/users/{userId}` is strictly private to that user. There are no admin-override
+ *   rules implemented, as the data structure does not currently support a performant way to check for a global role.
+ * - Immutable Results: Once an `examResult` is created by a student, it cannot be updated or deleted to ensure
+ *   the integrity of their academic record.
+ * - Relational Integrity: On create, rules validate that ownership fields within a document (e.g., `studentId`)
+ *   match the `userId` from the path, ensuring data consistency. On update, these fields are immutable.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions to improve readability and maintainability.
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * This is the primary function for enforcing path-based ownership.
+     * @param userId The user ID from the document path.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks for ownership on an existing document. Used for update and delete
+     * operations to prevent acting on non-existent data.
+     * @param userId The user ID from the document path.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Secures a user's profile document. Users can create their own profile,
+     *   and only they can read, update, or delete it. Listing all users is forbidden.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document at `/users/auth.uid`.
+     * @deny (get) User 'user-abc' trying to read the profile document at `/users/user-xyz`.
+     * @principle Enforces Self-Creation and strict Ownership for user profiles.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Secures exams created by a user (teacher). Only the user who owns
+       *   the data tree can create, read, update, or delete exams within it.
+       * @path /users/{userId}/exams/{examId}
+       * @allow (create) Teacher 'teacher-123' creating an exam at `/users/teacher-123/exams/math-101`.
+       * @deny (list) Student 'student-456' trying to list exams at `/users/teacher-123/exams`.
+       * @principle Enforces strict path-based ownership for a user's subcollections.
+       */
+      match /exams/{examId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.teacherId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.teacherId == resource.data.teacherId;
+        allow delete: if isExistingOwner(userId);
+
+        /**
+         * @description Secures the questions within an exam. Access is inherited from the
+         *   parent user (teacher) path, ensuring only the exam creator can manage its questions.
+         * @path /users/{userId}/exams/{examId}/questions/{questionId}
+         * @allow (update) Teacher 'teacher-123' updating a question at `/users/teacher-123/exams/math-101/questions/q1`.
+         * @deny (get) Any user other than 'teacher-123' trying to read a question from that path.
+         * @principle Inherits ownership from the top-level path for nested subcollections.
+         */
+        match /questions/{questionId} {
+          allow get: if isOwner(userId);
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId) && request.resource.data.examId == examId;
+          allow update: if isExistingOwner(userId) && request.resource.data.examId == resource.data.examId;
+          allow delete: if isExistingOwner(userId);
+        }
+      }
+
+      /**
+       * @description Secures a student's exam results. A student can create their own results
+       *   and can read them, but cannot modify or delete them to ensure data integrity.
+       * @path /users/{userId}/examResults/{examResultId}
+       * @allow (create) Student 'student-456' submitting their result to `/users/student-456/examResults/res-abc`.
+       * @deny (update) Student 'student-456' trying to change their score after submission.
+       * @principle Enforces ownership for creation and reads, but makes results immutable after creation.
+       */
+      match /examResults/{examResultId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.studentId == userId;
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+  }
+}
