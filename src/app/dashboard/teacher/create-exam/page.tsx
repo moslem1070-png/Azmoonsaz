@@ -15,7 +15,7 @@ import {
   Sparkles,
   Upload,
 } from 'lucide-react';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
@@ -64,7 +64,7 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
-type Role = 'student' | 'teacher' | 'manager';
+type Role = 'student' | 'teacher';
 
 export default function CreateExamPage() {
   const router = useRouter();
@@ -123,7 +123,52 @@ export default function CreateExamPage() {
   };
 
   const handleGenerateQuestions = async () => {
-    // Similar to before
+    const { title, difficulty } = form.getValues();
+    if (!title) {
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: 'برای تولید سوال، ابتدا باید عنوان آزمون را مشخص کنید.',
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    toast({
+      title: 'در حال تولید سوالات...',
+      description: 'لطفا چند لحظه منتظر بمانید. این فرآیند ممکن است کمی طول بکشد.',
+    });
+
+    try {
+      const result = await generateExamQuestions({
+        topic: title,
+        difficulty,
+        numberOfQuestions: 10,
+      });
+
+      if (result && result.questions) {
+        const newQuestions = result.questions.map(q => ({
+          text: q.question,
+          options: q.options.map(opt => ({ value: opt })),
+          correctAnswer: q.correctAnswer,
+          imageURL: '',
+        }));
+        replace(newQuestions); // Replace existing questions with new ones
+        toast({
+          title: 'سوالات با موفقیت تولید شد',
+          description: '۱۰ سوال جدید به فرم اضافه شد. می‌توانید آن‌ها را ویرایش کنید.',
+        });
+      }
+    } catch (error) {
+      console.error('Error generating questions:', error);
+      toast({
+        variant: 'destructive',
+        title: 'خطا در تولید سوال',
+        description: 'مشکلی در ارتباط با هوش مصنوعی پیش آمد. لطفا دوباره تلاش کنید.',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
@@ -145,7 +190,7 @@ export default function CreateExamPage() {
       // and get a `downloadURL` to save in the `examData`.
       const finalCoverImageUrl = form.getValues('coverImageURL');
 
-      const examData = {
+      const examDocRef = await addDoc(collection(firestore, 'exams'), {
         title: data.title,
         description: data.description,
         difficulty: data.difficulty,
@@ -153,22 +198,26 @@ export default function CreateExamPage() {
         coverImageURL: finalCoverImageUrl,
         teacherId: user.uid,
         createdAt: serverTimestamp(),
-        // Questions will be added as a subcollection
-      };
-
-      const examDocRef = await addDoc(collection(firestore, 'exams'), examData);
+      });
       
+      const examId = examDocRef.id;
+      // Update the document with its own ID
+      await setDoc(examDocRef, { id: examId }, { merge: true });
+
       // Upload question images and create question documents
       const questionPromises = data.questions.map(async (q, index) => {
         // Placeholder: In real app, upload questionImageFiles[index] to get a URL
         const finalQuestionImageUrl = q.imageURL;
-        const questionDocRef = doc(collection(firestore, `exams/${examDocRef.id}/questions`));
-        return setDoc(questionDocRef, {
-            ...q,
+        
+        const questionDocRef = doc(collection(firestore, `exams/${examId}/questions`));
+        
+        await setDoc(questionDocRef, {
             id: questionDocRef.id,
+            examId: examId,
+            text: q.text,
             options: q.options.map(opt => opt.value),
+            correctAnswer: q.correctAnswer,
             imageURL: finalQuestionImageUrl || '', // Ensure it's not undefined
-            examId: examDocRef.id,
         });
       });
 
@@ -332,14 +381,17 @@ export default function CreateExamPage() {
                         ))}
                       </div>
                       
-                      <Button type="button" size="sm" variant="ghost" onClick={() => form.setValue(`questions.${index}.options`, [...form.getValues(`questions.${index}.options`), {value: ''}])}>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => {
+                          const currentOptions = form.getValues(`questions.${index}.options`);
+                          form.setValue(`questions.${index}.options`, [...currentOptions, { value: '' }]);
+                      }}>
                           افزودن گزینه
                       </Button>
 
                       <FormField control={form.control} name={`questions.${index}.correctAnswer`} render={({ field: correctAnsField }) => (
                         <FormItem>
                           <FormLabel>پاسخ صحیح</FormLabel>
-                          <Select onValueChange={correctAnsField.onChange} defaultValue={correctAnsField.value} dir="rtl">
+                          <Select onValueChange={correctAnsField.onChange} value={correctAnsField.value} dir="rtl">
                             <FormControl><SelectTrigger><SelectValue placeholder="پاسخ صحیح را انتخاب کنید" /></SelectTrigger></FormControl>
                             <SelectContent>
                               {form.watch(`questions.${index}.options`).map((opt, optIndex) => (
