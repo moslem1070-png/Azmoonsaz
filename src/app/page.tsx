@@ -182,7 +182,7 @@ export default function LoginPage() {
             transition={{ duration: 0.3 }}
           >
             <form className="space-y-6" onSubmit={handleAuthSubmission}>
-              {authMode === 'signup' && (
+              {authMode === 'signup' && selectedRole === 'student' && (
                  <div className="relative">
                   <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input 
@@ -217,7 +217,7 @@ export default function LoginPage() {
                   required
                 />
               </div>
-              {authMode === 'signup' && (
+              {authMode === 'signup' && selectedRole === 'student' && (
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input 
