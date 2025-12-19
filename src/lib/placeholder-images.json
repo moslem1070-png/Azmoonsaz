@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "exam-cover-1",
+      "description": "Cover for a general knowledge quiz.",
+      "imageUrl": "https://images.unsplash.com/photo-1696952385417-58262e2e7765?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8a25vd2xlZGdlJTIwYm9va3xlbnwwfHx8fDE3NjYwNjAyNDd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "knowledge book"
+    },
+    {
+      "id": "exam-cover-2",
+      "description": "Cover for a science quiz.",
+      "imageUrl": "https://images.unsplash.com/photo-1599738797731-05c251166fd8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxzY2llbmNlJTIwdGVjaG5vbG9neXxlbnwwfHx8fDE3NjYwNjY4MDF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "science technology"
+    },
+    {
+      "id": "exam-cover-3",
+      "description": "Cover for a history quiz.",
+      "imageUrl": "https://images.unsplash.com/photo-1733602502096-280eef450125?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxoaXN0b3J5JTIwYW5jaWVudHxlbnwwfHx8fDE3NjYxMTM5MzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "history ancient"
+    },
+    {
+      "id": "exam-cover-4",
+      "description": "Cover for a math quiz.",
+      "imageUrl": "https://images.unsplash.com/photo-1666071083297-601c9b0701a4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxtYXRoZW1hdGljcyUyMG51bWJlcnN8ZW58MHx8fHwxNzY2MTQ3NzU0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mathematics numbers"
+    },
+    {
+      "id": "question-image-1",
+      "description": "Image for a geography question about mountains.",
+      "imageUrl": "https://images.unsplash.com/photo-1612441804231-77a36b284856?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxtb3VudGFpbiUyMGxhbmRzY2FwZXxlbnwwfHx8fDE3NjYwNTQzNjN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mountain landscape"
+    }
+  ]
 }
