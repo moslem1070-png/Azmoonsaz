@@ -83,8 +83,10 @@ export default function LoginPage() {
                     } catch (creationError: any) {
                          toast({ variant: 'destructive', title: 'خطای بحرانی', description: 'امکان ایجاد حساب مدیر وجود نداشت.' });
                     }
+                } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                  toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور مدیر اشتباه است.' });
                 } else {
-                    toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور مدیر اشتباه است.' });
+                    toast({ variant: 'destructive', title: 'خطا', description: error.message });
                 }
             } finally {
                 setLoading(false);
@@ -103,7 +105,7 @@ export default function LoginPage() {
       return;
     }
     
-    if (!isNationalIdValid) {
+    if (selectedRole === 'student' && !isNationalIdValid) {
         toast({ variant: 'destructive', title: 'خطا', description: 'کد ملی باید ۱۰ رقم باشد.' });
         setLoading(false);
         return;
@@ -152,6 +154,7 @@ export default function LoginPage() {
         error.code === 'auth/user-not-found' ? 'کاربری با این کد ملی یافت نشد.' :
         error.code === 'auth/wrong-password' ? 'رمز عبور اشتباه است.' :
         error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلا ثبت‌نام کرده است.' :
+        error.code === 'auth/invalid-credential' ? 'اطلاعات ورود نامعتبر است.' :
         'خطایی در هنگام ورود یا ثبت‌نام رخ داد.';
       toast({ variant: 'destructive', title: 'خطا', description: errorMessage });
     } finally {
@@ -235,24 +238,28 @@ export default function LoginPage() {
                   />
                 </div>
               )}
-              <div className="relative">
-                <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input 
-                  type="text" 
-                  placeholder={selectedRole === 'teacher' ? "نام کاربری مدیر" : "کد ملی"}
-                  className={cn(
-                    "pl-10 text-right",
-                    selectedRole === 'student' && nationalId.length > 0 && !isNationalIdValid && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
-                  )}
-                  value={nationalId}
-                  onChange={(e) => setNationalId(e.target.value)}
-                  required
-                  maxLength={selectedRole === 'student' ? 10 : undefined}
-                />
+              
+              <div>
+                <div className="relative">
+                  <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input 
+                    type="text" 
+                    placeholder={selectedRole === 'teacher' ? "نام کاربری مدیر" : "کد ملی"}
+                    className={cn(
+                      "pl-10 text-right",
+                      selectedRole === 'student' && nationalId.length > 0 && !isNationalIdValid && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
+                    )}
+                    value={nationalId}
+                    onChange={(e) => setNationalId(e.target.value)}
+                    required
+                    maxLength={selectedRole === 'student' ? 10 : undefined}
+                  />
+                </div>
                 {selectedRole === 'student' && nationalId.length > 0 && !isNationalIdValid && (
                     <p className="text-xs text-muted-foreground mt-1.5 text-right">کد ملی باید ۱۰ رقم باشد.</p>
                 )}
               </div>
+
               <div className="relative">
                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input 
@@ -264,6 +271,7 @@ export default function LoginPage() {
                   required
                 />
               </div>
+
               {authMode === 'signup' && selectedRole === 'student' && (
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -277,7 +285,7 @@ export default function LoginPage() {
                   />
                 </div>
               )}
-              <Button type="submit" className="w-full bg-primary/80 hover:bg-primary" disabled={loading}>
+              <Button type="submit" className="w-full bg-primary/80 hover:bg-primary" disabled={loading || (selectedRole === 'student' && nationalId.length > 0 && !isNationalIdValid)}>
                 {loading ? 'در حال پردازش...' : (authMode === 'login' ? 'ورود' : 'ایجاد حساب')}
                 {!loading && <ArrowRight className="mr-2 h-4 w-4" />}
               </Button>
