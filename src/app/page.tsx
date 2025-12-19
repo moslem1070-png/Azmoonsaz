@@ -17,7 +17,7 @@ type Role = 'student' | 'teacher';
 type AuthMode = 'login' | 'signup';
 
 // Helper function to create a fake email from national ID
-const createEmailFromNationalId = (nationalId: string) => `${nationalId}@quizmaster.com`;
+const createEmailFromNationalId = (nationalId: string, role: Role) => `${role}-${nationalId}@quizmaster.com`;
 
 export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<Role>('student');
@@ -82,42 +82,6 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    if (selectedRole === 'teacher') {
-        // Hardcoded credentials for teacher/admin login
-        if (nationalId === 'admin' && password === 'admin123') {
-            try {
-                // This is a dummy email for auth purpose, not a real one
-                await signInWithEmailAndPassword(auth, 'teacher-admin@quizmaster.com', 'admin123');
-                localStorage.setItem('userRole', 'teacher');
-                router.push('/dashboard/teacher');
-                toast({ title: 'ورود موفق', description: 'به داشبورد مدیریت خوش آمدید.' });
-            } catch (error: any) {
-                 if (error.code === 'auth/user-not-found') {
-                    try {
-                        const userCredential = await createUserWithEmailAndPassword(auth, 'teacher-admin@quizmaster.com', 'admin123');
-                        await updateProfile(userCredential.user, { displayName: 'مدیر سیستم' });
-                        localStorage.setItem('userRole', 'teacher');
-                        router.push('/dashboard/teacher');
-                        toast({ title: 'ورود موفق', description: 'حساب کاربری مدیر ایجاد و وارد شدید.' });
-                    } catch (creationError: any) {
-                         toast({ variant: 'destructive', title: 'خطای بحرانی', description: 'امکان ایجاد حساب مدیر وجود نداشت.' });
-                    }
-                } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-                  toast({ variant: 'destructive', title: 'خطا', description: 'رمز عبور مدیر اشتباه است.' });
-                } else {
-                    toast({ variant: 'destructive', title: 'خطا', description: error.message });
-                }
-            } finally {
-                setLoading(false);
-            }
-        } else {
-            toast({ variant: 'destructive', title: 'خطای ورود', description: 'اطلاعات ورود مدیر صحیح نیست.' });
-            setLoading(false);
-        }
-        return;
-    }
-
-
     if (!nationalId || !password) {
       toast({ variant: 'destructive', title: 'خطا', description: 'کد ملی و رمز عبور الزامی است.' });
       setLoading(false);
@@ -130,12 +94,12 @@ export default function LoginPage() {
         return;
     }
 
-    const email = createEmailFromNationalId(nationalId);
+    const email = createEmailFromNationalId(nationalId, selectedRole);
 
     try {
       let userCredential;
       if (authMode === 'signup') {
-        if (!isPasswordLengthValid) {
+        if (passwordError) {
             toast({ variant: 'destructive', title: 'خطا', description: passwordError });
             setLoading(false);
             return;
@@ -190,7 +154,6 @@ export default function LoginPage() {
     if (authMode === 'login') {
       return selectedRole === 'teacher' ? 'ورود مدیر / معلم' : 'ورود دانش‌آموز';
     }
-    // Signup mode is only for students now, but we check role just in case
     return selectedRole === 'teacher' ? 'ثبت‌نام مدیر / معلم' : 'ثبت‌نام دانش‌آموز';
   };
 
@@ -200,7 +163,6 @@ export default function LoginPage() {
     exit: { opacity: 0, y: -20 },
   };
   
-  // Don't render anything until auth state is determined
   if (isUserLoading || user) {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
   }
@@ -220,7 +182,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Role Selection */}
         <div className="flex bg-white/5 p-1 rounded-full">
           <button
             onClick={() => handleRoleChange('student')}
@@ -254,7 +215,7 @@ export default function LoginPage() {
             transition={{ duration: 0.3 }}
           >
             <form className="space-y-6" onSubmit={handleAuthSubmission}>
-              {authMode === 'signup' && selectedRole === 'student' && (
+              {authMode === 'signup' && (
                  <div className="relative">
                   <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input 
@@ -273,7 +234,7 @@ export default function LoginPage() {
                   <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input 
                     type="text" 
-                    placeholder={selectedRole === 'teacher' ? "نام کاربری" : "کد ملی"}
+                    placeholder={selectedRole === 'teacher' ? "کد ملی یا نام کاربری" : "کد ملی"}
                     className={cn(
                       "pl-10 text-right",
                       nationalIdError && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
@@ -309,7 +270,7 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {authMode === 'signup' && selectedRole === 'student' && (
+              {authMode === 'signup' && (
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input 
@@ -331,35 +292,29 @@ export default function LoginPage() {
           </motion.div>
         </AnimatePresence>
 
-        {selectedRole === 'student' && (
-          <div className="flex items-center justify-center space-x-reverse space-x-2">
-              <Button
-                variant="link"
-                onClick={() => setAuthMode('login')}
-                className={cn(
-                  'text-muted-foreground transition-colors',
-                  authMode === 'login' && 'font-bold text-accent'
-                )}
-              >
-                ورود
-              </Button>
-              <div className="h-4 w-px bg-border"></div>
-              <Button
-                variant="link"
-                onClick={() => setAuthMode('signup')}
-                className={cn(
-                  'text-muted-foreground transition-colors',
-                  authMode === 'signup' && 'font-bold text-accent'
-                )}
-              >
-                ثبت‌نام
-              </Button>
-          </div>
-        )}
-        
-        {selectedRole === 'teacher' && authMode === 'login' && (
-             <p className="text-xs text-muted-foreground text-center pt-4">برای ورود به عنوان مدیر، از نام کاربری `admin` و رمز عبور `admin123` استفاده کنید.</p>
-        )}
+        <div className="flex items-center justify-center space-x-reverse space-x-2">
+            <Button
+              variant="link"
+              onClick={() => setAuthMode('login')}
+              className={cn(
+                'text-muted-foreground transition-colors',
+                authMode === 'login' && 'font-bold text-accent'
+              )}
+            >
+              ورود
+            </Button>
+            <div className="h-4 w-px bg-border"></div>
+            <Button
+              variant="link"
+              onClick={() => setAuthMode('signup')}
+              className={cn(
+                'text-muted-foreground transition-colors',
+                authMode === 'signup' && 'font-bold text-accent'
+              )}
+            >
+              ثبت‌نام
+            </Button>
+        </div>
 
       </GlassCard>
     </div>
