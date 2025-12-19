@@ -85,10 +85,12 @@ const Header = ({ children }: { children?: ReactNode }) => {
                         <Home className="ml-2 h-4 w-4" />
                         <span>صفحه اصلی</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push('/dashboard/history')}>
-                        <History className="ml-2 h-4 w-4" />
-                        <span>کارنامه آزمون‌های قبلی</span>
-                      </DropdownMenuItem>
+                      {userRole === 'student' && (
+                        <DropdownMenuItem onClick={() => router.push('/dashboard/history')}>
+                          <History className="ml-2 h-4 w-4" />
+                          <span>کارنامه آزمون‌های قبلی</span>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => {/* router.push('/profile') */}}>
                         <Edit className="ml-2 h-4 w-4" />
                         <span>ویرایش پروفایل</span>
@@ -103,7 +105,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
                    {children}
                 </div>
                 <Link href={getDashboardUrl()} className="flex items-center gap-3">
-                    <h1 className="text-lg sm:text-xl font-bold text-white">Persian QuizMaster</h1>
+                    <h1 className="hidden sm:block text-lg sm:text-xl font-bold text-white">Persian QuizMaster</h1>
                     <div className="p-2 bg-primary/80 rounded-lg">
                         <BookOpen className="h-6 w-6 text-primary-foreground" />
                     </div>
