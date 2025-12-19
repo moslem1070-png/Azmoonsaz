@@ -12,32 +12,25 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserPlus, Fingerprint, Key, Briefcase } from 'lucide-react';
+import { UserPlus, Fingerprint, Key } from 'lucide-react';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 const formSchema = z.object({
   fullName: z.string().min(3, { message: 'نام کامل باید حداقل ۳ حرف باشد.' }),
-  username: z.string().min(1, { message: 'نام کاربری یا کد ملی الزامی است.' }),
+  username: z.string().min(1, { message: 'کد ملی الزامی است.' }),
   password: z.string().min(8, { message: 'رمز عبور باید حداقل ۸ کاراکتر باشد.' }),
-  role: z.enum(['student', 'teacher', 'manager'], { required_error: 'انتخاب نقش الزامی است.' }),
 }).refine(data => {
-    if (data.role === 'student') {
-        return /^\d{10}$/.test(data.username);
-    }
-    return true;
+    return /^\d{10}$/.test(data.username);
 }, {
-    message: 'برای دانش‌آموز، کد ملی باید ۱۰ رقم و فقط شامل عدد باشد.',
+    message: 'کد ملی باید ۱۰ رقم و فقط شامل عدد باشد.',
     path: ['username'],
 });
 
 type FormData = z.infer<typeof formSchema>;
-type Role = 'student' | 'teacher' | 'manager';
 
-const createEmailFromUsername = (username: string, role: Role) => {
-    const rolePrefix = role === 'manager' ? 'manager' : (role === 'teacher' ? 'teacher' : 'student');
-    return `${rolePrefix}-${username}@quizmaster.com`;
+const createEmailFromUsername = (username: string) => {
+    return `student-${username}@quizmaster.com`;
 }
 
 export default function CreateUserForm() {
@@ -52,15 +45,12 @@ export default function CreateUserForm() {
       fullName: '',
       username: '',
       password: '',
-      role: 'student',
     },
   });
-  
-  const selectedRole = form.watch('role');
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     setLoading(true);
-    const email = createEmailFromUsername(data.username, data.role as Role);
+    const email = createEmailFromUsername(data.username);
 
     try {
       // Step 1: Create user in Auth
@@ -76,7 +66,7 @@ export default function CreateUserForm() {
           id: user.uid,
           displayName: data.fullName,
           email: user.email,
-          role: data.role,
+          role: 'student', // Always create a student
       };
 
       // Set document in Firestore, with error handling
@@ -89,7 +79,6 @@ export default function CreateUserForm() {
                 requestResourceData: newUserDoc,
             });
             errorEmitter.emit('permission-error', permissionError);
-            // We might want to rollback auth user creation here, but for now just show error
             toast({
                 variant: 'destructive',
                 title: 'خطای پایگاه داده',
@@ -99,15 +88,15 @@ export default function CreateUserForm() {
 
 
       toast({
-        title: 'کاربر با موفقیت ایجاد شد',
-        description: `کاربر "${data.fullName}" با نقش "${data.role}" ایجاد شد.`,
+        title: 'دانش‌آموز با موفقیت ایجاد شد',
+        description: `کاربر "${data.fullName}" با موفقیت ایجاد شد.`,
       });
       form.reset();
 
     } catch (error: any) {
       console.error("Create user error:", error);
       const errorMessage =
-        error.code === 'auth/email-already-in-use' ? 'این نام کاربری/کد ملی قبلاً استفاده شده است.' :
+        error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلاً استفاده شده است.' :
         'خطایی در ایجاد کاربر رخ داد.';
       toast({
         variant: 'destructive',
@@ -122,49 +111,22 @@ export default function CreateUserForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <FormField
+        <FormField
             control={form.control}
             name="fullName"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel>نام و نام خانوادگی</FormLabel>
+                <FormLabel>نام و نام خانوادگی دانش‌آموز</FormLabel>
                 <div className="relative">
                     <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <FormControl>
-                    <Input placeholder="نام کامل کاربر" {...field} className="pl-10 text-right" />
+                    <Input placeholder="نام کامل دانش‌آموز" {...field} className="pl-10 text-right" />
                     </FormControl>
                 </div>
                 <FormMessage />
                 </FormItem>
             )}
             />
-            <FormField
-            control={form.control}
-            name="role"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>نقش کاربر</FormLabel>
-                 <div className="relative">
-                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
-                    <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl">
-                        <FormControl>
-                        <SelectTrigger className="pl-10 text-right">
-                            <SelectValue placeholder="نقش کاربر را انتخاب کنید" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        <SelectItem value="student">دانش‌آموز</SelectItem>
-                        <SelectItem value="teacher">معلم</SelectItem>
-                        <SelectItem value="manager">مدیر</SelectItem>
-                        </SelectContent>
-                    </Select>
-                 </div>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-        </div>
         
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <FormField
@@ -172,11 +134,11 @@ export default function CreateUserForm() {
                 name="username"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>{selectedRole === 'student' ? 'کد ملی' : 'نام کاربری'}</FormLabel>
+                    <FormLabel>کد ملی دانش‌آموز</FormLabel>
                     <div className="relative">
                         <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                         <FormControl>
-                        <Input placeholder={selectedRole === 'student' ? 'کد ملی ۱۰ رقمی' : 'نام کاربری انگلیسی'} {...field} className="pl-10 text-right" />
+                        <Input placeholder="کد ملی ۱۰ رقمی" {...field} className="pl-10 text-right" />
                         </FormControl>
                     </div>
                     <FormMessage />
@@ -203,10 +165,12 @@ export default function CreateUserForm() {
         
         <div className="flex justify-end pt-4">
           <Button type="submit" className="w-full sm:w-auto bg-primary/80 hover:bg-primary" disabled={loading}>
-            {loading ? 'در حال ایجاد...' : 'ایجاد کاربر'}
+            {loading ? 'در حال ایجاد...' : 'ایجاد دانش‌آموز'}
           </Button>
         </div>
       </form>
     </Form>
   );
 }
+
+    

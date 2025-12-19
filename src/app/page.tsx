@@ -19,19 +19,16 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 type Role = 'student' | 'teacher';
-type TeacherSubRole = 'manager' | 'teacher';
 type AuthMode = 'login' | 'signup';
 
-// Helper function to create a fake email from national ID
-const createEmailFromNationalId = (nationalId: string, role: Role, subRole?: TeacherSubRole) => {
-    const rolePrefix = subRole || role;
-    return `${rolePrefix}-${nationalId}@quizmaster.com`;
+// Helper function to create a fake email from national ID or username
+const createEmail = (username: string, role: Role) => {
+    return `${role}-${username}@quizmaster.com`;
 }
 
 
 export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<Role>('student');
-  const [teacherSubRole, setTeacherSubRole] = useState<TeacherSubRole>('manager');
   const [authMode, setAuthMode] = useState<AuthMode>('login');
 
   const [nationalId, setNationalId] = useState('');
@@ -67,7 +64,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!isUserLoading && user) {
       const role = localStorage.getItem('userRole');
-      if (role === 'teacher' || role === 'manager') {
+      if (role === 'teacher') {
         router.push('/dashboard/teacher');
       } else {
         router.push('/dashboard');
@@ -102,7 +99,13 @@ export default function LoginPage() {
     }
 
     if (authMode === 'signup') {
-      // --- SIGNUP LOGIC ---
+      // --- SIGNUP LOGIC (Only for students from this page) ---
+       if (selectedRole === 'teacher') {
+            toast({ variant: 'destructive', title: 'خطا', description: 'ثبت‌نام معلم از این صفحه امکان‌پذیر نیست. لطفا از یک معلم دیگر بخواهید شما را اضافه کند.' });
+            setLoading(false);
+            return;
+       }
+
       if (passwordError) {
           toast({ variant: 'destructive', title: 'خطا', description: passwordError });
           setLoading(false);
@@ -119,8 +122,7 @@ export default function LoginPage() {
           return;
       }
 
-      const effectiveRole = selectedRole === 'teacher' ? teacherSubRole : selectedRole;
-      const email = createEmailFromNationalId(nationalId, selectedRole, selectedRole === 'teacher' ? teacherSubRole : undefined);
+      const email = createEmail(nationalId, 'student');
       
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -134,39 +136,33 @@ export default function LoginPage() {
           id: user.uid,
           displayName: fullName,
           email: user.email,
-          role: effectiveRole,
+          role: 'student',
         };
         
         setDoc(userDocRef, newUserDoc).catch(serverError => {
             console.error("Firestore user creation failed:", serverError);
-            // This is a background error, but we can still inform the user
-            toast({
-                variant: 'destructive',
-                title: 'خطای پایگاه داده',
-                description: 'حساب کاربری شما ایجاد شد، اما در ذخیره پروفایل مشکلی پیش آمد.'
-            });
             const permissionError = new FirestorePermissionError({
               path: userDocRef.path,
               operation: 'create',
               requestResourceData: newUserDoc,
             });
             errorEmitter.emit('permission-error', permissionError);
+             toast({
+                variant: 'destructive',
+                title: 'خطای پایگاه داده',
+                description: 'حساب کاربری شما ایجاد شد، اما در ذخیره پروفایل مشکلی پیش آمد.'
+            });
         });
 
         toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
         
-        localStorage.setItem('userRole', effectiveRole);
-        
-        if (selectedRole === 'teacher') {
-          router.push('/dashboard/teacher');
-        } else {
-          router.push('/dashboard');
-        }
+        localStorage.setItem('userRole', 'student');
+        router.push('/dashboard');
 
       } catch(error: any) {
          console.error("Signup error:", error);
          const errorMessage =
-          error.code === 'auth/email-already-in-use' ? 'این نام کاربری/کد ملی قبلا ثبت‌نام کرده است.' :
+          error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلا ثبت‌نام کرده است.' :
           'خطایی در هنگام پردازش درخواست شما رخ داد.';
         toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: errorMessage });
       } finally {
@@ -176,55 +172,33 @@ export default function LoginPage() {
     }
     
     // --- LOGIN LOGIC ---
-    const attemptLogin = async (role: string) => {
-        const email = `${role}-${nationalId}@quizmaster.com`;
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            localStorage.setItem('userRole', role);
-            return true;
-        } catch (error: any) {
-            // Only suppress "user not found" errors to allow trying the next role
-            if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-                return false;
-            }
-            // For other errors, re-throw them to be caught by the outer catch block
-            throw error;
-        }
-    };
+    const email = createEmail(nationalId, selectedRole);
 
     try {
-        let loggedIn = false;
+        await signInWithEmailAndPassword(auth, email, password);
+        localStorage.setItem('userRole', selectedRole);
+
+        toast({ title: 'ورود موفق', description: 'خوش آمدید!' });
+        
         if (selectedRole === 'teacher') {
-            // Try logging in as manager first, then teacher
-            loggedIn = await attemptLogin('manager') || await attemptLogin('teacher');
+            router.push('/dashboard/teacher');
         } else {
-            loggedIn = await attemptLogin('student');
+            router.push('/dashboard');
         }
 
-        if (loggedIn) {
-            toast({ title: 'ورود موفق', description: 'خوش آمدید!' });
-            const userRole = localStorage.getItem('userRole');
-            if (userRole === 'teacher' || userRole === 'manager') {
-                router.push('/dashboard/teacher');
-            } else {
-                router.push('/dashboard');
-            }
-        } else {
-            toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
-        }
     } catch (error: any) {
         console.error("Login error:", error);
-        toast({ variant: 'destructive', title: 'خطا در ورود', description: 'خطایی در هنگام ورود رخ داد.' });
+        toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
     } finally {
         setLoading(false);
     }
   };
   
   const getTitle = () => {
-    if (authMode === 'login') {
-      return selectedRole === 'teacher' ? 'ورود مدیر / معلم' : 'ورود دانش‌آموز';
+    if (selectedRole === 'teacher') {
+        return 'ورود معلم';
     }
-    return selectedRole === 'teacher' ? 'ثبت‌نام مدیر / معلم' : 'ثبت‌نام دانش‌آموز';
+    return authMode === 'login' ? 'ورود دانش‌آموز' : 'ثبت‌نام دانش‌آموز';
   };
 
   const formVariants = {
@@ -266,7 +240,7 @@ export default function LoginPage() {
             )}
           >
             <Briefcase className="inline-block w-4 h-4 ml-2" />
-            مدیر / معلم
+            معلم
           </button>
         </div>
 
@@ -280,26 +254,8 @@ export default function LoginPage() {
             transition={{ duration: 0.3 }}
           >
             <form className="space-y-6" onSubmit={handleAuthSubmission}>
-              {selectedRole === 'teacher' && authMode === 'signup' && (
-                <RadioGroup
-                  defaultValue="manager"
-                  value={teacherSubRole}
-                  onValueChange={(value: TeacherSubRole) => setTeacherSubRole(value)}
-                  className="flex justify-center gap-x-6"
-                  dir="rtl"
-                >
-                  <div className="flex items-center space-x-2 space-x-reverse">
-                    <RadioGroupItem value="manager" id="r-manager" />
-                    <Label htmlFor="r-manager">ثبت‌نام به عنوان مدیر</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 space-x-reverse">
-                    <RadioGroupItem value="teacher" id="r-teacher" />
-                    <Label htmlFor="r-teacher">ثبت‌نام به عنوان معلم</Label>
-                  </div>
-                </RadioGroup>
-              )}
-
-              {authMode === 'signup' && (
+              
+              {authMode === 'signup' && selectedRole === 'student' && (
                  <div className="relative">
                   <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input 
@@ -354,7 +310,7 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {authMode === 'signup' && (
+              {authMode === 'signup' && selectedRole === 'student' && (
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input 
@@ -406,3 +362,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

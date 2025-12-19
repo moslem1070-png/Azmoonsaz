@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import type { User as AppUser } from '@/lib/types';
 
 
-type Role = 'student' | 'teacher' | 'manager';
+type Role = 'student' | 'teacher';
 
 export default function ManageUsersPage() {
   const router = useRouter();
@@ -29,10 +29,10 @@ export default function ManageUsersPage() {
   const firestore = useFirestore();
   const [userRole, setUserRole] = useState<Role | null>(null);
 
-  // Fetch all users from Firestore only if the user is a manager or teacher
+  // Fetch all users from Firestore only if the user is a teacher
   const usersCollection = useMemoFirebase(
     () => {
-        if (firestore && (userRole === 'manager' || userRole === 'teacher')) {
+        if (firestore && userRole === 'teacher') {
             return collection(firestore, 'users');
         }
         return null;
@@ -48,16 +48,13 @@ export default function ManageUsersPage() {
 
     if (!isUserLoading && !user) {
       router.push('/');
-    } else if (!isUserLoading && user && role !== 'manager' && role !== 'teacher') {
-       // Allow teachers to also see the list, but maybe not edit/delete in future
+    } else if (!isUserLoading && user && role !== 'teacher') {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
 
   const getRoleBadgeVariant = (role: Role) => {
     switch (role) {
-      case 'manager':
-        return 'destructive';
       case 'teacher':
         return 'default';
       case 'student':
@@ -69,8 +66,6 @@ export default function ManageUsersPage() {
   
   const getRoleText = (role: Role) => {
     switch (role) {
-      case 'manager':
-        return 'مدیر';
       case 'teacher':
         return 'معلم';
       case 'student':
@@ -89,7 +84,7 @@ export default function ManageUsersPage() {
     };
 
 
-  const isLoading = isUserLoading || (usersLoading && (userRole === 'teacher' || userRole === 'manager'));
+  const isLoading = isUserLoading || (usersLoading && userRole === 'teacher');
 
   if (isLoading) {
     return (
@@ -102,7 +97,7 @@ export default function ManageUsersPage() {
     );
   }
   
-  if (!user || (userRole !== 'manager' && userRole !== 'teacher')) {
+  if (!user || userRole !== 'teacher') {
      return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
   }
 
@@ -117,12 +112,10 @@ export default function ManageUsersPage() {
               <ArrowRight className="ml-2 h-4 w-4" />
               بازگشت
             </Button>
-            {userRole === 'manager' && (
-              <Button size="sm" onClick={() => router.push('/dashboard/teacher/create-user')}>
+            <Button size="sm" onClick={() => router.push('/dashboard/teacher/create-user')}>
                 <UserPlus className="ml-2 h-4 w-4" />
                 ایجاد کاربر جدید
               </Button>
-            )}
           </div>
         </div>
 
@@ -149,20 +142,19 @@ export default function ManageUsersPage() {
                       </TableCell>
                       <TableCell className="text-right hidden sm:table-cell text-muted-foreground">{getIdentifier(u.email)}</TableCell>
                       <TableCell className="text-left">
-                        {userRole === 'manager' ? (
+                        {u.role === 'student' && (
                           <div className="flex gap-2 justify-end">
-                            <Button variant="outline" size="icon" className="h-8 w-8">
+                            <Button variant="outline" size="icon" className="h-8 w-8" disabled>
                               <Edit className="h-4 w-4" />
                               <span className="sr-only">ویرایش</span>
                             </Button>
-                            <Button variant="destructive" size="icon" className="h-8 w-8">
+                            <Button variant="destructive" size="icon" className="h-8 w-8" disabled>
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">حذف</span>
                             </Button>
                           </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">-</span>
                         )}
+                        {u.role !== 'student' && (<span className="text-xs text-muted-foreground">-</span>)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -179,3 +171,5 @@ export default function ManageUsersPage() {
     </div>
   );
 }
+
+    

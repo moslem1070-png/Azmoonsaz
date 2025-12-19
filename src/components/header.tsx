@@ -34,7 +34,7 @@ import { useAuth, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-type Role = 'student' | 'teacher' | 'manager';
+type Role = 'student' | 'teacher';
 
 const Header = ({ children }: { children?: ReactNode }) => {
   const { user } = useUser();
@@ -72,7 +72,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
     if (userRole === 'student') {
       return <GraduationCap className="w-5 h-5" />;
     }
-    if (userRole === 'teacher' || userRole === 'manager') {
+    if (userRole === 'teacher') {
       return <Briefcase className="w-5 h-5" />;
     }
     return <User className="w-5 h-5" />;
@@ -171,3 +171,5 @@ const Header = ({ children }: { children?: ReactNode }) => {
 };
 
 export default Header;
+
+    

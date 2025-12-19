@@ -47,5 +47,7 @@ export type User = {
   id: string; // This will be the Firebase Auth UID
   displayName: string;
   email: string;
-  role: 'student' | 'teacher' | 'manager';
+  role: 'student' | 'teacher';
 };
+
+    

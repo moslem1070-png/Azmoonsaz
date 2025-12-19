@@ -19,8 +19,8 @@ import { useUser, useAuth } from '@/firebase';
 // Helper to get role from email
 const getRoleFromEmail = (email?: string | null): string => {
     if (!email) return 'student';
-    const role = email.split('-')[0].split('@')[0];
-    return role;
+    if (email.startsWith('teacher-')) return 'teacher';
+    return 'student';
 }
 
 // Helper function to create a fake email from national ID
@@ -296,3 +296,5 @@ export default function ProfilePage() {
         </div>
     );
 }
+
+    

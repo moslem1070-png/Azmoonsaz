@@ -8,7 +8,7 @@ import Header from '@/components/header';
 import { useUser } from '@/firebase';
 import GlassCard from '@/components/glass-card';
 
-type Role = 'student' | 'teacher' | 'manager';
+type Role = 'student' | 'teacher';
 
 interface DashboardCardProps {
   title: string;
@@ -57,17 +57,13 @@ export default function TeacherDashboardPage() {
   }
 
   const getTitle = () => {
-    if (userRole === 'manager') return 'داشبورد مدیر';
-    if (userRole === 'teacher') return 'داشبورد معلم';
-    return 'داشبورد';
+    return 'داشبورد معلم';
   };
 
   const getWelcomeMessage = () => {
-    const name = user.displayName || (userRole === 'manager' ? 'مدیر' : 'معلم');
+    const name = user.displayName || 'معلم';
     return `خوش آمدید، ${name}!`;
   };
-  
-  const isManager = userRole === 'manager';
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -95,7 +91,7 @@ export default function TeacherDashboardPage() {
             />
              <DashboardCard
                 title="مدیریت کاربران"
-                description={isManager ? "کاربران جدید ایجاد کنید و لیست کاربران را ببینید." : "لیست کاربران سیستم را مشاهده کنید."}
+                description="دانش‌آموزان جدید ایجاد کنید و لیست کاربران را ببینید."
                 icon={<Users className="w-8 h-8" />}
                 onClick={() => router.push('/dashboard/teacher/manage-users')}
             />
@@ -111,3 +107,5 @@ export default function TeacherDashboardPage() {
     </div>
   );
 }
+
+    

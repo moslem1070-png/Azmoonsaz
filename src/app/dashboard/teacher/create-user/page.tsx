@@ -9,7 +9,7 @@ import CreateUserForm from '@/components/create-user-form';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type Role = 'student' | 'teacher' | 'manager';
+type Role = 'student' | 'teacher';
 
 export default function CreateUserPage() {
   const router = useRouter();
@@ -23,13 +23,13 @@ export default function CreateUserPage() {
 
     if (!isUserLoading && !user) {
       router.push('/');
-    } else if (!isUserLoading && user && role !== 'manager') {
-      // Only managers can create users.
-      router.push('/dashboard/teacher');
+    } else if (!isUserLoading && user && role !== 'teacher') {
+      // Only teachers can create users.
+      router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading || !user || userRole !== 'manager') {
+  if (isUserLoading || !user || userRole !== 'teacher') {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
   }
 
@@ -47,7 +47,7 @@ export default function CreateUserPage() {
             </div>
           
             <p className="text-muted-foreground text-right mb-8">
-                از این فرم برای اضافه کردن دانش‌آموزان، معلمان یا مدیران جدید به سیستم استفاده کنید.
+                از این فرم برای اضافه کردن دانش‌آموزان جدید به سیستم استفاده کنید.
             </p>
 
             <CreateUserForm />
@@ -57,3 +57,5 @@ export default function CreateUserPage() {
     </div>
   );
 }
+
+    
