@@ -81,7 +81,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
                         <Home className="ml-2 h-4 w-4" />
                         <span>صفحه اصلی</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push('/dashboard#exam-history')}>
+                      <DropdownMenuItem onClick={() => router.push('/dashboard/history')}>
                         <History className="ml-2 h-4 w-4" />
                         <span>کارنامه آزمون‌های قبلی</span>
                       </DropdownMenuItem>

@@ -1,28 +1,25 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Clock, FileQuestion, TrendingUp, CheckCircle, Percent, Lock } from "lucide-react";
+import { Clock, FileQuestion, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from 'react';
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { exams, history as mockHistory } from "@/lib/mock-data";
+import { exams } from "@/lib/mock-data";
 import Header from "@/components/header";
 import GlassCard from "@/components/glass-card";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
 import { getCompletedExams } from "@/lib/results-storage";
-import { HistoryItem } from "@/lib/types";
 import { useUser } from "@/firebase";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [completedExamIds, setCompletedExamIds] = useState<Set<string>>(new Set());
-  const [history, setHistory] = useState<HistoryItem[]>(mockHistory);
   const { user, isUserLoading } = useUser();
 
   useEffect(() => {
@@ -36,35 +33,6 @@ export default function DashboardPage() {
     // This will only run on the client
     const completed = getCompletedExams();
     setCompletedExamIds(new Set(Object.keys(completed)));
-    
-    const newHistory: HistoryItem[] = Object.keys(completed).map(examId => {
-      const exam = exams.find(e => e.id === examId);
-      if (!exam) return null;
-
-      const userAnswers = completed[examId];
-      let correctAnswers = 0;
-      const totalQuestions = exam.questions.length;
-      exam.questions.forEach(q => {
-        if (userAnswers[q.id] === q.correctAnswerIndex) {
-          correctAnswers++;
-        }
-      });
-      const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
-      
-      return {
-        id: `hist-${examId}`,
-        examId: examId,
-        title: exam.title,
-        date: new Date().toLocaleDateString('fa-IR'),
-        score: score,
-        correctAnswers: correctAnswers,
-        totalQuestions: totalQuestions,
-        rank: Math.floor(Math.random() * 10) + 1, // Mock rank
-      }
-    }).filter((item): item is HistoryItem => item !== null);
-
-    setHistory(prev => [...newHistory, ...prev.filter(h => !completed[h.examId])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-
   }, []);
 
   const getPlaceholderImage = (id: string) => {
@@ -142,35 +110,6 @@ export default function DashboardPage() {
               </GlassCard>
             )})}
           </div>
-        </section>
-
-        <section id="exam-history" className="mt-16">
-           <h2 className="text-3xl font-bold mb-6 text-right">تاریخچه آزمون‌ها</h2>
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {history.map((item) => (
-              <GlassCard key={item.id} className="p-6 flex flex-col">
-                <h3 className="text-lg font-bold mb-2">{item.title}</h3>
-                <p className="text-sm text-muted-foreground mb-4">تاریخ: {item.date}</p>
-                <div className="flex-1 space-y-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-muted-foreground"><Percent className="w-4 h-4 text-accent"/> امتیاز</span>
-                    <span className="font-semibold">{item.score}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                     <span className="flex items-center gap-2 text-muted-foreground"><CheckCircle className="w-4 h-4 text-green-400"/> پاسخ صحیح</span>
-                    <span className="font-semibold">{item.correctAnswers}</span>
-                  </div>
-                   <div className="flex items-center justify-between">
-                     <span className="flex items-center gap-2 text-muted-foreground"><TrendingUp className="w-4 h-4 text-accent"/> رتبه</span>
-                    <span className="font-semibold">{item.rank}</span>
-                  </div>
-                </div>
-                 <Button variant="outline" className="w-full mt-6 border-accent/50 text-accent hover:bg-accent/20 hover:text-accent" onClick={() => router.push(`/exam/${item.examId}/results`)}>
-                    مشاهده جزئیات
-                  </Button>
-              </GlassCard>
-            ))}
-           </div>
         </section>
       </main>
     </div>
