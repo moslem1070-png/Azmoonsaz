@@ -159,7 +159,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
             </h1>
             <div className="p-2 bg-primary/80 rounded-lg group-hover:scale-110 transition-transform">
               <Image 
-                src="/logo.png"
+                src="/logo.jpg"
                 alt="آزمونساز لوگو"
                 width={24}
                 height={24}
