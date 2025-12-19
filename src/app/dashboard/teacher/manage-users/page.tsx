@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ArrowRight, Edit, Trash2, UserPlus } from 'lucide-react';
+import { ArrowRight, Trash2, UserPlus } from 'lucide-react';
 import { collection, deleteDoc, doc } from 'firebase/firestore';
 
 import Header from '@/components/header';
@@ -65,18 +65,6 @@ export default function ManageUsersPage() {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
-  
-  const handleEditUser = (userId: string) => {
-    // For now, editing a user profile is complex due to auth.
-    // A proper implementation would require a separate admin-like edit page.
-    // For this version, we can navigate to the generic profile page,
-    // though it will show the logged-in teacher's profile.
-    router.push(`/dashboard/profile`);
-     toast({
-      title: 'قابلیت در دست ساخت',
-      description: 'ویرایش پروفایل کاربران دیگر در نسخه‌های آینده اضافه خواهد شد.',
-    });
-  };
 
   const handleDeleteUser = async (userId: string) => {
     if (!firestore || !user || user.uid === userId) {
@@ -189,10 +177,6 @@ export default function ManageUsersPage() {
                       <TableCell className="text-left">
                         {u.role === 'student' && (
                           <div className="flex gap-2 justify-end">
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleEditUser(u.id)}>
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">ویرایش</span>
-                            </Button>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="destructive" size="icon" className="h-8 w-8">
