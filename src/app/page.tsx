@@ -34,7 +34,17 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  const isNationalIdValid = useMemo(() => nationalId.length === 10, [nationalId]);
+  const isNationalIdLengthValid = useMemo(() => nationalId.length === 10, [nationalId]);
+  const isNationalIdNumeric = useMemo(() => /^\d*$/.test(nationalId), [nationalId]);
+
+  const nationalIdError = useMemo(() => {
+    if (selectedRole === 'student' && nationalId.length > 0) {
+      if (!isNationalIdNumeric) return "کد ملی فقط باید شامل عدد باشد.";
+      if (!isNationalIdLengthValid) return "کد ملی باید ۱۰ رقم باشد.";
+    }
+    return null;
+  }, [selectedRole, nationalId, isNationalIdLengthValid, isNationalIdNumeric]);
+
 
   useEffect(() => {
     // If user is already logged in, redirect based on role
@@ -105,8 +115,8 @@ export default function LoginPage() {
       return;
     }
     
-    if (selectedRole === 'student' && !isNationalIdValid) {
-        toast({ variant: 'destructive', title: 'خطا', description: 'کد ملی باید ۱۰ رقم باشد.' });
+    if (selectedRole === 'student' && nationalIdError) {
+        toast({ variant: 'destructive', title: 'خطا', description: nationalIdError });
         setLoading(false);
         return;
     }
@@ -247,7 +257,7 @@ export default function LoginPage() {
                     placeholder={selectedRole === 'teacher' ? "نام کاربری مدیر" : "کد ملی"}
                     className={cn(
                       "pl-10 text-right",
-                      selectedRole === 'student' && nationalId.length > 0 && !isNationalIdValid && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
+                      nationalIdError && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
                     )}
                     value={nationalId}
                     onChange={(e) => setNationalId(e.target.value)}
@@ -255,8 +265,8 @@ export default function LoginPage() {
                     maxLength={selectedRole === 'student' ? 10 : undefined}
                   />
                 </div>
-                {selectedRole === 'student' && nationalId.length > 0 && !isNationalIdValid && (
-                    <p className="text-xs text-muted-foreground mt-1.5 text-right">کد ملی باید ۱۰ رقم باشد.</p>
+                {nationalIdError && (
+                    <p className="text-xs text-muted-foreground mt-1.5 text-right">{nationalIdError}</p>
                 )}
               </div>
 
@@ -285,7 +295,7 @@ export default function LoginPage() {
                   />
                 </div>
               )}
-              <Button type="submit" className="w-full bg-primary/80 hover:bg-primary" disabled={loading || (selectedRole === 'student' && nationalId.length > 0 && !isNationalIdValid)}>
+              <Button type="submit" className="w-full bg-primary/80 hover:bg-primary" disabled={loading || (selectedRole === 'student' && !!nationalIdError)}>
                 {loading ? 'در حال پردازش...' : (authMode === 'login' ? 'ورود' : 'ایجاد حساب')}
                 {!loading && <ArrowRight className="mr-2 h-4 w-4" />}
               </Button>
