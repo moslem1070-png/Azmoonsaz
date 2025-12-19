@@ -6,7 +6,7 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Key, User, Fingerprint, Lock } from 'lucide-react';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, updateEmail } from 'firebase/auth';
 
 import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
@@ -16,9 +16,20 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useAuth } from '@/firebase';
 
+// Helper to get role from email
+const getRoleFromEmail = (email?: string | null): string => {
+    if (!email) return 'student';
+    return email.split('-')[0];
+}
+
+// Helper function to create a fake email from national ID
+const createEmailFromNationalId = (nationalId: string, role: string) => {
+    return `${role}-${nationalId}@quizmaster.com`;
+}
+
 const formSchema = z.object({
     fullName: z.string().min(3, { message: 'نام و نام خانوادگی باید حداقل ۳ حرف باشد.' }),
-    nationalId: z.string(),
+    nationalId: z.string().min(1, { message: "کد ملی الزامی است."}),
     oldPassword: z.string().optional(),
     newPassword: z.string().optional(),
     confirmPassword: z.string().optional(),
@@ -67,6 +78,7 @@ export default function ProfilePage() {
     };
     
     const nationalId = getNationalIdFromEmail(user?.email);
+    const role = getRoleFromEmail(user?.email);
 
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema),
@@ -102,28 +114,71 @@ export default function ProfilePage() {
             return;
         }
 
+        const originalNationalId = getNationalIdFromEmail(user.email);
+        const didNationalIdChange = data.nationalId !== originalNationalId;
+        const didPasswordChange = !!data.newPassword;
+        const didFullNameChange = data.fullName !== user.displayName;
+
+        if (!didNationalIdChange && !didPasswordChange && !didFullNameChange) {
+            toast({ title: 'توجه', description: 'هیچ تغییری برای ذخیره وجود ندارد.' });
+            setLoading(false);
+            return;
+        }
+
+        if ((didNationalIdChange || didPasswordChange) && !data.oldPassword) {
+            toast({ variant: 'destructive', title: 'خطا', description: 'برای تغییر کد ملی یا رمز عبور، باید رمز عبور فعلی را وارد کنید.' });
+            setLoading(false);
+            return;
+        }
+
+        if (role === 'student' && !/^\d{10}$/.test(data.nationalId)) {
+            toast({ variant: 'destructive', title: 'خطا', description: 'کد ملی دانش‌آموز باید ۱۰ رقم و فقط شامل عدد باشد.' });
+            setLoading(false);
+            return;
+        }
+
+
         try {
-            // Update displayName if changed
-            if (data.fullName !== user.displayName) {
-                await updateProfile(user, { displayName: data.fullName });
-                toast({ title: 'موفق', description: 'نام شما با موفقیت به‌روزرسانی شد.' });
+            // Re-authenticate if necessary
+            if (didNationalIdChange || didPasswordChange) {
+                const credential = EmailAuthProvider.credential(user.email, data.oldPassword!);
+                await reauthenticateWithCredential(user, credential);
             }
 
-            // Update password if fields are filled
-            if (data.newPassword && data.oldPassword) {
-                const credential = EmailAuthProvider.credential(user.email, data.oldPassword);
-                await reauthenticateWithCredential(user, credential);
-                await updatePassword(user, data.newPassword);
-                toast({ title: 'موفق', description: 'رمز عبور شما با موفقیت تغییر کرد.' });
-                form.reset({ ...form.getValues(), oldPassword: '', newPassword: '', confirmPassword: '' });
-            } else if (data.fullName === user.displayName && !data.newPassword) {
-                 toast({ title: 'توجه', description: 'هیچ تغییری برای ذخیره وجود ندارد.' });
+            let successMessages = [];
+
+            // Update displayName if changed
+            if (didFullNameChange) {
+                await updateProfile(user, { displayName: data.fullName });
+                successMessages.push('نام شما با موفقیت به‌روزرسانی شد.');
             }
+            
+            // Update email (nationalId) if changed
+            if (didNationalIdChange) {
+                const newEmail = createEmailFromNationalId(data.nationalId, role);
+                await updateEmail(user, newEmail);
+                successMessages.push('کد ملی شما با موفقیت تغییر کرد.');
+                 // Update the local storage role to reflect the new email structure potential
+                const newRole = getRoleFromEmail(newEmail);
+                localStorage.setItem('userRole', newRole);
+            }
+
+            // Update password if changed
+            if (didPasswordChange) {
+                await updatePassword(user, data.newPassword!);
+                successMessages.push('رمز عبور شما با موفقیت تغییر کرد.');
+            }
+
+            toast({ title: 'موفق', description: successMessages.join(' ') });
+            form.reset({ ...form.getValues(), oldPassword: '', newPassword: '', confirmPassword: '' });
+
         } catch (error: any) {
             console.error("Profile update error:", error);
             const errorMessage = 
                 error.code === 'auth/wrong-password' ? 'رمز عبور فعلی اشتباه است.' :
                 error.code === 'auth/weak-password' ? 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.' :
+                error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلاً استفاده شده است.' :
+                error.code === 'auth/requires-recent-login' ? 'برای این عملیات نیاز به ورود مجدد است. لطفاً رمز عبور فعلی را وارد کنید.' :
                 'خطایی در به‌روزرسانی اطلاعات رخ داد.';
             toast({ variant: 'destructive', title: 'خطا', description: errorMessage });
         } finally {
@@ -165,11 +220,11 @@ export default function ProfilePage() {
                                 name="nationalId"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>کد ملی</FormLabel>
+                                        <FormLabel>{role === 'student' ? 'کد ملی' : 'نام کاربری'}</FormLabel>
                                         <div className="relative">
                                             <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                             <FormControl>
-                                                <Input {...field} className="pl-10 text-right" disabled />
+                                                <Input {...field} className="pl-10 text-right" maxLength={role === 'student' ? 10 : undefined}/>
                                             </FormControl>
                                         </div>
                                         <FormMessage />
@@ -179,7 +234,7 @@ export default function ProfilePage() {
                             
                             <hr className="border-white/10 my-8" />
                             
-                             <p className="text-sm text-muted-foreground text-center">برای تغییر رمز عبور، فیلدهای زیر را پر کنید.</p>
+                             <p className="text-sm text-muted-foreground text-center">برای تغییر رمز عبور یا کد ملی، باید رمز عبور فعلی را وارد کنید.</p>
 
                             <FormField
                                 control={form.control}
