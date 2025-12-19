@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react';
 import Header from '@/components/header';
 import { useUser } from '@/firebase';
 import GlassCard from '@/components/glass-card';
-import TeacherActionButtons from '@/components/teacher-action-buttons';
 
 type Role = 'student' | 'teacher' | 'manager';
 
@@ -48,7 +47,6 @@ export default function TeacherDashboardPage() {
       <main className="container mx-auto px-4 py-8 flex-1">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <h1 className="text-2xl sm:text-3xl font-bold text-right">{getTitle()}</h1>
-             <TeacherActionButtons role={userRole} />
         </div>
 
         <GlassCard className="p-6 sm:p-8">

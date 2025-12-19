@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { BookOpen, User, LogOut, Edit, GraduationCap, Home, History, Briefcase } from "lucide-react";
+import { BookOpen, User, LogOut, Edit, GraduationCap, Home, History, Briefcase, FilePlus, Settings, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { useState, useEffect, type ReactNode } from "react";
@@ -88,11 +88,28 @@ const Header = ({ children }: { children?: ReactNode }) => {
                         <Home className="ml-2 h-4 w-4" />
                         <span>صفحه اصلی</span>
                       </DropdownMenuItem>
-                      {userRole === 'student' && (
+                      {userRole === 'student' ? (
                         <DropdownMenuItem onClick={() => router.push('/dashboard/history')}>
                           <History className="ml-2 h-4 w-4" />
-                          <span>کارنامه آزمون‌های قبلی</span>
+                          <span>کارنامه آزمون‌ها</span>
                         </DropdownMenuItem>
+                      ) : (
+                        <>
+                           <DropdownMenuItem onClick={() => {/* router.push('/dashboard/teacher/create-exam') */}}>
+                                <FilePlus className="ml-2 h-4 w-4" />
+                                <span>ایجاد آزمون جدید</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {/* router.push('/dashboard/teacher/manage-exams') */}}>
+                                <Settings className="ml-2 h-4 w-4" />
+                                <span>مدیریت آزمون‌ها</span>
+                            </DropdownMenuItem>
+                           {userRole === 'manager' && (
+                                <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/create-user')}>
+                                    <UserPlus className="ml-2 h-4 w-4" />
+                                    <span>ایجاد کاربر</span>
+                                </DropdownMenuItem>
+                           )}
+                        </>
                       )}
                       <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
                         <Edit className="ml-2 h-4 w-4" />
