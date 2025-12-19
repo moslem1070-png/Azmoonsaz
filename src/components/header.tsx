@@ -158,17 +158,11 @@ const Header = ({ children }: { children?: ReactNode }) => {
               آزمونساز
             </h1>
             <div className="p-2 bg-primary/80 rounded-lg group-hover:scale-110 transition-transform">
-              {/* 
-                راهنما: 
-                1. یک پوشه به نام 'public' در ریشه پروژه خود بسازید.
-                2. فایل لوگوی خود را (مثلا logo.png) در آن پوشه قرار دهید.
-                3. در خط زیر، 'logo.png' را با نام فایل لوگوی خودتان جایگزین کنید.
-              */}
               <Image 
-                src="/logo.png" // This path points to the public folder
+                src="/logo.png"
                 alt="آزمونساز لوگو"
-                width={24} // Adjust size as needed
-                height={24} // Adjust size as needed
+                width={24}
+                height={24}
                 className="h-6 w-6"
               />
             </div>
