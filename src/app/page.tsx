@@ -270,7 +270,7 @@ export default function LoginPage() {
               
               <div>
                 <div className="relative">
-                  <Fingerprint className="absolute left-3 top-2.5 w-5 h-5 text-muted-foreground" />
+                  <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input 
                     type="text" 
                     placeholder={selectedRole === 'teacher' ? "نام کاربری مدیر" : "کد ملی"}
@@ -291,7 +291,7 @@ export default function LoginPage() {
 
               <div>
                 <div className="relative">
-                    <Key className="absolute left-3 top-2.5 w-5 h-5 text-muted-foreground" />
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input 
                     type="password" 
                     placeholder="رمز عبور" 
@@ -315,13 +315,11 @@ export default function LoginPage() {
                   <Input 
                     type="password" 
                     placeholder="تکرار رمز عبور" 
-                     className={cn(
-                        "pl-10 text-right",
-                        passwordError && "border-red-500/50 ring-1 ring-red-500/50 focus-visible:ring-red-500"
-                    )}
+                     className="pl-10 text-right"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
+                    disabled={!isPasswordLengthValid}
                   />
                 </div>
               )}
