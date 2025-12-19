@@ -65,7 +65,7 @@ export default function LoginPage() {
           setLoading(false);
           return;
         }
-        if (selectedRole === 'student' && !fullName) {
+        if (!fullName) {
             toast({ variant: 'destructive', title: 'خطا', description: 'نام و نام خانوادگی الزامی است.' });
             setLoading(false);
             return;
@@ -163,7 +163,7 @@ export default function LoginPage() {
             transition={{ duration: 0.3 }}
           >
             <form className="space-y-6" onSubmit={handleAuthSubmission}>
-              {authMode === 'signup' && selectedRole === 'student' && (
+              {authMode === 'signup' && (
                  <div className="relative">
                   <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input 
