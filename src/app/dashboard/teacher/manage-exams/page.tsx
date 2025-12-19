@@ -134,7 +134,7 @@ export default function ManageExamsPage() {
                               <Eye className="h-4 w-4" />
                               <span className="sr-only">مشاهده</span>
                             </Button>
-                          <Button variant="outline" size="icon" className="h-8 w-8" disabled>
+                          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => router.push(`/dashboard/teacher/edit-exam/${exam.id}`)}>
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">ویرایش</span>
                           </Button>
