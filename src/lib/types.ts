@@ -27,3 +27,5 @@ export type HistoryItem = {
   totalQuestions: number;
   rank: number;
 };
+
+export type UserRole = 'student' | 'teacher' | 'admin';
