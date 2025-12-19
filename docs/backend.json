@@ -14,10 +14,9 @@
           "type": "string",
           "description": "The role of the user (e.g., 'admin', 'teacher', 'student')."
         },
-        "email": {
+        "nationalId": {
           "type": "string",
-          "description": "The user's email address.",
-          "format": "email"
+          "description": "The user's national ID."
         },
         "firstName": {
           "type": "string",
@@ -31,7 +30,7 @@
       "required": [
         "id",
         "role",
-        "email",
+        "nationalId",
         "firstName",
         "lastName"
       ]
@@ -251,6 +250,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support the Persian QuizMaster application with a focus on authorization independence, clarity, and scalability.  The structure leverages path-based ownership for user-related data and a dedicated collection for global roles.  Authorization independence is achieved by structuring data such that security rules do not rely on hierarchical `get()` calls. This is accomplished via path-based ownership.\n\n**Explanation of Authorization Independence:**\nUser data and related entities (exams, questions, results) are organized under the `/users/{userId}` path, ensuring clear ownership and simplifying security rules. Because the path inherently defines ownership, no additional data needs to be read from parent documents to determine authorization. For collaborative data involving multiple users, a membership map (`members`) can be added to relevant documents, if required in future features.\n\n**Support for QAPs (Rules are not Filters):**\n\nPath-based ownership `/users/{userId}/exams` supports secure `list` operations. Security rules can efficiently filter the results based on the `userId` in the path without needing to inspect the contents of each exam document.\n\n**Additional Considerations**\n\n*   The design assumes user roles (admin, teacher, student) are managed at the authentication level. If roles need to be dynamically managed within the application, consider a dedicated `/roles/{userId}` collection."
+    "reasoning": "The Firestore structure is designed to support the Persian QuizMaster application with a focus on authorization independence, clarity, and scalability.  The structure leverages path-based ownership for user-related data and a dedicated collection for global roles.  Authorization independence is achieved by structuring data such that security rules do not rely on hierarchical `get()` calls. This is accomplished via path-based ownership.\\n\\n**Explanation of Authorization Independence:**\\nUser data and related entities (exams, questions, results) are organized under the `/users/{userId}` path, ensuring clear ownership and simplifying security rules. Because the path inherently defines ownership, no additional data needs to be read from parent documents to determine authorization. For collaborative data involving multiple users, a membership map (`members`) can be added to relevant documents, if required in future features.\\n\\n**Support for QAPs (Rules are not Filters):**\\n\\nPath-based ownership `/users/{userId}/exams` supports secure `list` operations. Security rules can efficiently filter the results based on the `userId` in the path without needing to inspect the contents of each exam document.\\n\\n**Additional Considerations**\\n\\n*   The design assumes user roles (admin, teacher, student) are managed at the authentication level. If roles need to be dynamically managed within the application, consider a dedicated `/roles/{userId}` collection."
   }
 }

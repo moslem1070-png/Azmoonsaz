@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Briefcase, Mail, Key, ArrowRight, UserPlus } from 'lucide-react';
+import { User, Briefcase, Key, ArrowRight, UserPlus, Fingerprint } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,13 +85,19 @@ export default function LoginPage() {
                 </div>
               )}
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input type="email" placeholder="ایمیل" className="pl-10 text-right" />
+                <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input type="text" placeholder="کد ملی" className="pl-10 text-right" />
               </div>
               <div className="relative">
                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input type="password" placeholder="رمز عبور" className="pl-10 text-right" />
               </div>
+              {authMode === 'signup' && (
+                <div className="relative">
+                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input type="password" placeholder="تکرار رمز عبور" className="pl-10 text-right" />
+                </div>
+              )}
               <Button type="submit" className="w-full bg-primary/80 hover:bg-primary">
                 {authMode === 'login' ? 'ورود' : 'ایجاد حساب'}
                 <ArrowRight className="mr-2 h-4 w-4" />
