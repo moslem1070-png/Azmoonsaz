@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Clock, FileQuestion, TrendingUp, CheckCircle, Percent, Lock, LogOut } from "lucide-react";
+import { Clock, FileQuestion, TrendingUp, CheckCircle, Percent, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from 'react';
 
@@ -16,8 +16,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
 import { getCompletedExams } from "@/lib/results-storage";
 import { HistoryItem } from "@/lib/types";
-import { useAuth, useUser } from "@/firebase";
-import { signOut } from "firebase/auth";
+import { useUser } from "@/firebase";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -25,8 +24,6 @@ export default function DashboardPage() {
   const [completedExamIds, setCompletedExamIds] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<HistoryItem[]>(mockHistory);
   const { user, isUserLoading } = useUser();
-  const auth = useAuth();
-
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -85,24 +82,6 @@ export default function DashboardPage() {
       router.push(`/exam/${examId}`);
     }
   };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push('/');
-      toast({
-        title: "خروج موفق",
-        description: "شما با موفقیت از حساب خود خارج شدید."
-      });
-    } catch (error) {
-      console.error("Error signing out: ", error);
-      toast({
-        variant: "destructive",
-        title: "خطا در خروج",
-        description: "هنگام خروج از حساب خطایی رخ داد.",
-      });
-    }
-  };
   
   if (isUserLoading || !user) {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
@@ -110,12 +89,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header>
-          <Button variant="ghost" onClick={handleLogout} className="text-white hover:bg-white/20">
-              <LogOut className="ml-2 h-4 w-4" />
-              خروج
-          </Button>
-      </Header>
+      <Header />
       <main className="container mx-auto px-4 py-8 flex-1">
         <section id="available-exams">
           <h1 className="text-3xl font-bold mb-6 text-right">آزمون‌های موجود</h1>

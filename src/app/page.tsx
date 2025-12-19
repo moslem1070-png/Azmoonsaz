@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import GlassCard from '@/components/glass-card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useUser } from '@/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
 type Role = 'student' | 'teacher';
 type AuthMode = 'login' | 'signup';
@@ -44,7 +44,7 @@ export default function LoginPage() {
 
   const handleRoleChange = (role: Role) => {
     setSelectedRole(role);
-    // If teacher is selected, only login is available
+    // If teacher is selected, only login is available now that the first admin is created
     if (role === 'teacher') {
       setAuthMode('login');
     }
@@ -74,15 +74,14 @@ export default function LoginPage() {
             setLoading(false);
             return;
         }
-        
-        // Signup is only for students now
-        if (selectedRole === 'teacher') {
-            toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت‌نام برای مدیر وجود ندارد.' });
-            setLoading(false);
-            return;
-        }
 
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Update user profile with full name
+        await updateProfile(userCredential.user, {
+            displayName: fullName,
+        });
+
         toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
         router.push('/dashboard');
 
@@ -91,7 +90,8 @@ export default function LoginPage() {
         toast({ title: 'ورود موفق', description: 'خوش آمدید!' });
         router.push('/dashboard');
       }
-    } catch (error: any) {
+    } catch (error: any)
+{
       console.error(error);
       const errorMessage =
         error.code === 'auth/user-not-found' ? 'کاربری با این کد ملی یافت نشد.' :
