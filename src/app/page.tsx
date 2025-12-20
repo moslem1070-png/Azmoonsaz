@@ -29,7 +29,8 @@ const createEmail = (username: string, role: Role) => {
 }
 
 const formSchema = z.object({
-  fullName: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
   nationalId: z.string().min(1, { message: 'کد ملی یا نام کاربری الزامی است.'}),
   password: z.string().min(1, { message: 'رمز عبور الزامی است.'}),
   confirmPassword: z.string(),
@@ -47,11 +48,18 @@ const getValidationSchema = (authMode: AuthMode, selectedRole: Role) => {
             }
         }
         if (authMode === 'signup') {
-            if (!data.fullName) {
+            if (!data.firstName) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
-                    message: "نام و نام خانوادگی الزامی است.",
-                    path: ['fullName'],
+                    message: "نام الزامی است.",
+                    path: ['firstName'],
+                });
+            }
+            if (!data.lastName) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "نام خانوادگی الزامی است.",
+                    path: ['lastName'],
                 });
             }
             if (data.password.length < 8) {
@@ -90,7 +98,8 @@ export default function LoginPage() {
     resolver: zodResolver(currentSchema),
     mode: 'onChange',
     defaultValues: {
-      fullName: '',
+      firstName: '',
+      lastName: '',
       nationalId: '',
       password: '',
       confirmPassword: '',
@@ -121,7 +130,9 @@ export default function LoginPage() {
   
   const handleAuthSubmission: SubmitHandler<z.infer<typeof currentSchema>> = async (data) => {
     setLoading(true);
-    const { nationalId, password, fullName } = data;
+    const { nationalId, password, firstName, lastName } = data;
+    const fullName = `${firstName} ${lastName}`.trim();
+
 
     // --- SIGNUP LOGIC ---
     if (authMode === 'signup') {
@@ -145,8 +156,8 @@ export default function LoginPage() {
         const newUserDoc = {
           id: user.uid,
           nationalId: nationalId,
-          firstName: fullName.split(' ')[0] || '',
-          lastName: fullName.split(' ').slice(1).join(' ') || '',
+          firstName: firstName,
+          lastName: lastName,
           role: selectedRole,
         };
         
@@ -271,27 +282,49 @@ export default function LoginPage() {
               <form className="space-y-6" onSubmit={form.handleSubmit(handleAuthSubmission)}>
                 
                 {authMode === 'signup' && (
-                  <FormField
-                    control={form.control}
-                    name="fullName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="sr-only">نام و نام خانوادگی</FormLabel>
-                        <div className="relative">
-                          <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                          <FormControl>
-                            <Input 
-                              type="text" 
-                              placeholder="نام و نام خانوادگی" 
-                              className="pl-10 text-right"
-                              {...field}
-                            />
-                          </FormControl>
-                        </div>
-                        <FormMessage className="text-right" />
-                      </FormItem>
-                    )}
-                  />
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="sr-only">نام</FormLabel>
+                          <div className="relative">
+                            <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                            <FormControl>
+                              <Input 
+                                type="text" 
+                                placeholder="نام" 
+                                className="pl-10 text-right"
+                                {...field}
+                              />
+                            </FormControl>
+                          </div>
+                          <FormMessage className="text-right" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="sr-only">نام خانوادگی</FormLabel>
+                          <div className="relative">
+                            <FormControl>
+                              <Input 
+                                type="text" 
+                                placeholder="نام خانوادگی" 
+                                className="text-right"
+                                {...field}
+                              />
+                            </FormControl>
+                          </div>
+                          <FormMessage className="text-right" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 )}
                 
                 <FormField
@@ -362,7 +395,7 @@ export default function LoginPage() {
                     )}
                   />
                 )}
-                <Button type="submit" className="w-full bg-primary/80 hover:bg-primary" disabled={loading || !form.formState.isValid}>
+                <Button type="submit" className="w-full bg-primary/80 hover:bg-primary" disabled={loading || (authMode === 'signup' && !form.formState.isValid)}>
                   {loading ? 'در حال پردازش...' : (authMode === 'login' ? 'ورود' : 'ایجاد حساب')}
                   {!loading && <ArrowRight className="mr-2 h-4 w-4" />}
                 </Button>
