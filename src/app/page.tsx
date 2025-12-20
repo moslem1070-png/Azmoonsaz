@@ -311,11 +311,12 @@ export default function LoginPage() {
                         <FormItem>
                           <FormLabel className="sr-only">نام خانوادگی</FormLabel>
                           <div className="relative">
+                            <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                             <FormControl>
                               <Input 
                                 type="text" 
                                 placeholder="نام خانوادگی" 
-                                className="text-right"
+                                className="pl-10 text-right"
                                 {...field}
                               />
                             </FormControl>
