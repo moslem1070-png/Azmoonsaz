@@ -99,13 +99,10 @@ export default function TeacherDashboardPage() {
                 title="مشاهده نتایج کلی"
                 description="گزارش‌ها و آمارهای کلی نتایج آزمون‌ها را ببینید."
                 icon={<BarChart2 className="w-8 h-8" />}
-                onClick={() => {}}
-                disabled={true}
+                onClick={() => router.push('/dashboard/teacher/results')}
             />
         </div>
       </main>
     </div>
   );
 }
-
-    

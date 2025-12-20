@@ -13,6 +13,7 @@ import {
   Users,
   LayoutDashboard,
   BrainCircuit,
+  BarChart2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
@@ -130,6 +131,10 @@ const Header = ({ children }: { children?: ReactNode }) => {
                       <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/manage-users')}>
                         <Users className="ml-2 h-4 w-4" />
                         <span>مدیریت کاربران</span>
+                      </DropdownMenuItem>
+                       <DropdownMenuItem onClick={() => router.push('/dashboard/teacher/results')}>
+                        <BarChart2 className="ml-2 h-4 w-4" />
+                        <span>نتایج کلی</span>
                       </DropdownMenuItem>
                     </>
                   )}
