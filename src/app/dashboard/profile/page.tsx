@@ -74,7 +74,11 @@ export default function ProfilePage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [userProfile, setUserProfile] = useState<AppUser | null>(null);
-    const role = localStorage.getItem('userRole');
+    //const role = localStorage.getItem('userRole');
+    let role = null;
+if (typeof window !== 'undefined') {
+  role = localStorage.getItem('userRole');
+}
     
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema),
