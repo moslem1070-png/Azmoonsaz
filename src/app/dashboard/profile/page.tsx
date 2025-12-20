@@ -241,9 +241,12 @@ export default function ProfilePage() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>نام خانوادگی</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="نام خانوادگی" {...field} className="text-right" />
-                                            </FormControl>
+                                            <div className="relative">
+                                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                                                <FormControl>
+                                                    <Input placeholder="نام خانوادگی" {...field} className="pl-10 text-right" />
+                                                </FormControl>
+                                            </div>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -333,3 +336,4 @@ export default function ProfilePage() {
 }
 
     
+
