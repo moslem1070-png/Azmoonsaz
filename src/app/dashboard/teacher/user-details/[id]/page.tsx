@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowRight, User as UserIcon, Award, Fingerprint, Calendar, CheckCircle } from 'lucide-react';
-import { collection, doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 
 import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
@@ -16,6 +16,8 @@ import type { User as AppUser, ExamResult, Exam } from '@/lib/types';
 
 interface EnrichedExamResult extends ExamResult {
   examTitle?: string;
+  rank?: number;
+  totalParticipants?: number;
 }
 
 export default function UserDetailsPage() {
@@ -47,29 +49,51 @@ export default function UserDetailsPage() {
   }, [teacherUser, teacherLoading, router]);
 
   useEffect(() => {
-    const fetchExamTitles = async () => {
+    const fetchExamDetailsAndRank = async () => {
       if (!examResults || !firestore) {
         if (!examResults) setResultsLoading(false);
         return;
       }
       setResultsLoading(true);
 
+      // 1. Fetch all users once to avoid refetching in loop
+      const usersSnapshot = await getDocs(collection(firestore, 'users'));
+      const studentUsers = usersSnapshot.docs.filter(doc => (doc.data() as AppUser).role === 'student');
+
       const promises = examResults.map(async (result) => {
         const examDocRef = doc(firestore, 'exams', result.examId);
         const examSnap = await getDoc(examDocRef);
+        const examTitle = examSnap.exists() ? (examSnap.data() as Exam).title : 'آزمون حذف شده';
+
+        // 2. Fetch all results for this specific exam
+        const allResultsForExam: ExamResult[] = [];
+        for (const studentDoc of studentUsers) {
+          const studentResultRef = doc(firestore, `users/${studentDoc.id}/examResults/${result.examId}`);
+          const studentResultSnap = await getDoc(studentResultRef);
+          if (studentResultSnap.exists()) {
+            allResultsForExam.push(studentResultSnap.data() as ExamResult);
+          }
+        }
+        
+        // 3. Calculate rank
+        allResultsForExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
+        const currentUserRank = allResultsForExam.findIndex(r => r.studentId === userId) + 1;
+        
         return {
           ...result,
-          examTitle: examSnap.exists() ? (examSnap.data() as Exam).title : 'آزمون حذف شده',
+          examTitle,
+          rank: currentUserRank > 0 ? currentUserRank : undefined,
+          totalParticipants: allResultsForExam.length,
         };
       });
 
-      const resultsWithTitles = await Promise.all(promises);
-      setEnrichedResults(resultsWithTitles.sort((a,b) => b.submissionTime.toMillis() - a.submissionTime.toMillis()));
+      const resultsWithDetails = await Promise.all(promises);
+      setEnrichedResults(resultsWithDetails.sort((a,b) => b.submissionTime.toMillis() - a.submissionTime.toMillis()));
       setResultsLoading(false);
     };
 
-    fetchExamTitles();
-  }, [examResults, firestore]);
+    fetchExamDetailsAndRank();
+  }, [examResults, firestore, userId]);
 
   const isLoading = teacherLoading || profileLoading;
   
@@ -133,7 +157,7 @@ export default function UserDetailsPage() {
                         <TableRow>
                             <TableHead className="text-right">عنوان آزمون</TableHead>
                             <TableHead className="text-center">امتیاز</TableHead>
-                            <TableHead className="text-center hidden sm:table-cell">پاسخ صحیح</TableHead>
+                            <TableHead className="text-center">رتبه در آزمون</TableHead>
                             <TableHead className="text-center hidden sm:table-cell">تاریخ</TableHead>
                         </TableRow>
                         </TableHeader>
@@ -146,7 +170,13 @@ export default function UserDetailsPage() {
                                 {result.scorePercentage}%
                                 </Badge>
                             </TableCell>
-                            <TableCell className="text-center hidden sm:table-cell">{result.correctness} / {result.totalQuestions}</TableCell>
+                             <TableCell className="text-center font-semibold">
+                                {result.rank && result.totalParticipants ? (
+                                    <span>{result.rank} <span className="text-xs text-muted-foreground">از {result.totalParticipants}</span></span>
+                                ) : (
+                                    '-'
+                                )}
+                            </TableCell>
                             <TableCell className="text-center hidden sm:table-cell text-muted-foreground text-xs">
                                 {result.submissionTime.toDate().toLocaleDateString('fa-IR')}
                             </TableCell>
