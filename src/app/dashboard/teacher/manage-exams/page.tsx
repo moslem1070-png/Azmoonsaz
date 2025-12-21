@@ -130,10 +130,6 @@ export default function ManageExamsPage() {
                       <TableCell className="text-center hidden sm:table-cell">{exam.timer}</TableCell>
                       <TableCell className="text-left">
                         <div className="flex gap-2 justify-end">
-                           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => router.push(`/exam/${exam.id}/start`)}>
-                              <Eye className="h-4 w-4" />
-                              <span className="sr-only">مشاهده</span>
-                            </Button>
                           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => router.push(`/dashboard/teacher/edit-exam/${exam.id}`)}>
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">ویرایش</span>

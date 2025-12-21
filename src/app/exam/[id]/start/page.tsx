@@ -31,8 +31,13 @@ export default function ExamStartPage() {
   const [questionCount, setQuestionCount] = useState(0);
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/');
+    if (!isUserLoading) {
+      const role = localStorage.getItem('userRole');
+      if (!user) {
+        router.push('/');
+      } else if (role === 'teacher') {
+        router.push('/dashboard/teacher');
+      }
     }
   }, [user, isUserLoading, router]);
 
