@@ -310,7 +310,7 @@ export default function CreateExamPage() {
                         type="number"
                         readOnly
                         value={numAiQuestions}
-                        className="w-16 text-center text-lg font-bold"
+                        className="w-16 h-10 p-0 flex items-center justify-center text-center text-lg font-bold"
                         aria-label="تعداد سوالات برای تولید"
                       />
                       <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => setNumAiQuestions(prev => Math.min(20, prev + 1))}><Plus className="h-4 w-4" /></Button>
