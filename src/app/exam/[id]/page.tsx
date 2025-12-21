@@ -115,7 +115,7 @@ export default function ExamPage() {
         title: 'آزمون به پایان رسید',
         description: 'در حال محاسبه نتایج...',
       });
-      router.push(`/exam/${exam.id}/results`);
+      router.replace(`/exam/${exam.id}/results`);
     } catch (error) {
       toast({
         variant: 'destructive',
