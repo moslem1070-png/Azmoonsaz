@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   BarChart,
@@ -11,8 +11,8 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { Home, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
-import { doc, collection, getDocs } from 'firebase/firestore';
+import { Home, CheckCircle, XCircle, HelpCircle, Award } from 'lucide-react';
+import { doc, collection, getDocs, query } from 'firebase/firestore';
 
 import GlassCard from '@/components/glass-card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,10 @@ export default function ResultsPage() {
   const firestore = useFirestore();
 
   const examId = Array.isArray(params.id) ? params.id[0] : params.id;
+
+  const [rank, setRank] = useState<number | null>(null);
+  const [totalParticipants, setTotalParticipants] = useState(0);
+  const [rankLoading, setRankLoading] = useState(true);
 
   const examRef = useMemoFirebase(
     () => (firestore && examId ? doc(firestore, 'exams', examId) : null),
@@ -41,8 +45,41 @@ export default function ResultsPage() {
     [firestore, user, examId]
   );
   const { data: result, isLoading: resultLoading } = useDoc<ExamResult>(resultRef);
+  
+  useEffect(() => {
+    const fetchRank = async () => {
+        if (!firestore || !user || !examId) return;
 
-  const isLoading = userLoading || examLoading || resultLoading;
+        setRankLoading(true);
+
+        // This is inefficient but necessary with the current data structure.
+        // A better approach would be a top-level `examResults` collection.
+        const usersSnapshot = await getDocs(collection(firestore, 'users'));
+        
+        const allResultsForExam: (ExamResult & {userId: string})[] = [];
+
+        for (const userDoc of usersSnapshot.docs) {
+            const resultDocRef = doc(firestore, 'users', userDoc.id, 'examResults', examId);
+            const resultSnap = await getDoc(resultDocRef);
+            if (resultSnap.exists()) {
+                allResultsForExam.push({ ...(resultSnap.data() as ExamResult), userId: userDoc.id });
+            }
+        }
+        
+        allResultsForExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
+        
+        const currentUserRank = allResultsForExam.findIndex(r => r.userId === user.uid) + 1;
+
+        setTotalParticipants(allResultsForExam.length);
+        setRank(currentUserRank > 0 ? currentUserRank : null);
+        setRankLoading(false);
+    };
+
+    fetchRank();
+  }, [firestore, user, examId]);
+
+
+  const isLoading = userLoading || examLoading || resultLoading || rankLoading;
 
   const chartData = useMemo(() => {
     if (!result) return [];
@@ -71,9 +108,9 @@ export default function ResultsPage() {
 
   if (!exam || !result) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <h1 className="text-2xl">نتیجه آزمون یافت نشد.</h1>
-        <Button onClick={() => router.push('/dashboard')} className="mt-4">
+        <Button onClick={() => router.push('/dashboard')}>
             بازگشت به داشبورد
         </Button>
       </div>
@@ -142,6 +179,17 @@ export default function ResultsPage() {
             </GlassCard>
           </div>
         </div>
+        
+        {rank && totalParticipants > 0 && (
+          <GlassCard className="p-4 flex items-center justify-center text-center mt-8">
+            <div className="flex items-center gap-3">
+              <Award className="w-7 h-7 text-yellow-400" />
+              <span className="text-lg">
+                رتبه شما: <span className="font-bold">{rank}</span> از <span className="font-bold">{totalParticipants}</span> شرکت‌کننده
+              </span>
+            </div>
+          </GlassCard>
+        )}
 
         <div className="h-48 mt-12" dir="ltr">
           <ResponsiveContainer width="100%" height="100%">
