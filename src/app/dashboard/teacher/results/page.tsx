@@ -3,13 +3,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, doc } from 'firebase/firestore';
-import { BarChart, Users, FileText, Percent } from 'lucide-react';
+import { BarChart, Users, FileText, Percent, ChevronLeft } from 'lucide-react';
 
 import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import type { ExamResult, User as AppUser, Exam } from '@/lib/types';
 
 
@@ -178,21 +179,28 @@ export default function OverallResultsPage() {
                     <TableRow>
                         <TableHead className="text-right">عنوان آزمون</TableHead>
                         <TableHead className="text-center">سطح دشواری</TableHead>
-                        <TableHead className="text-center">تعداد شرکت‌کنندگان</TableHead>
+                        <TableHead className="text-center">شرکت‌کنندگان</TableHead>
                         <TableHead className="text-center">میانگین نمره</TableHead>
+                        <TableHead className="text-left"></TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
                     {aggregatedExams.map((exam) => (
-                        <TableRow key={exam.examId}>
-                        <TableCell className="font-medium text-right">{exam.examTitle}</TableCell>
-                        <TableCell className="text-center">
-                             <Badge variant={exam.difficulty === 'Easy' ? 'secondary' : exam.difficulty === 'Medium' ? 'default' : 'destructive'}>
-                                {difficultyMap[exam.difficulty] || exam.difficulty}
-                             </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">{exam.participants}</TableCell>
-                        <TableCell className="text-center font-semibold">{exam.averageScore}%</TableCell>
+                        <TableRow key={exam.examId} className="cursor-pointer hover:bg-white/5" onClick={() => router.push(`/dashboard/teacher/results/${exam.examId}`)}>
+                          <TableCell className="font-medium text-right">{exam.examTitle}</TableCell>
+                          <TableCell className="text-center">
+                              <Badge variant={exam.difficulty === 'Easy' ? 'secondary' : exam.difficulty === 'Medium' ? 'default' : 'destructive'}>
+                                  {difficultyMap[exam.difficulty] || exam.difficulty}
+                              </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">{exam.participants}</TableCell>
+                          <TableCell className="text-center font-semibold">{exam.averageScore}%</TableCell>
+                          <TableCell className="text-left">
+                            <Button variant="ghost" size="sm" className="text-xs">
+                              مشاهده جزئیات
+                              <ChevronLeft className="mr-1 h-3 w-3" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                     ))}
                     </TableBody>
