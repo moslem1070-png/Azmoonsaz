@@ -152,7 +152,7 @@ export default function ManageUsersPage() {
                   <TableRow>
                     <TableHead className="text-right">نام کامل</TableHead>
                     <TableHead className="text-center">نقش</TableHead>
-                    <TableHead className="text-right hidden sm:table-cell">کد ملی / نام کاربری</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">کد ملی</TableHead>
                     <TableHead className="text-left">عملیات</TableHead>
                   </TableRow>
                 </TableHeader>
