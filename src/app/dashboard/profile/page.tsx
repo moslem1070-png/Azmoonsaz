@@ -74,54 +74,50 @@ export default function ProfilePage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [userProfile, setUserProfile] = useState<AppUser | null>(null);
-    //const role = localStorage.getItem('userRole');
     let role = null;
-if (typeof window !== 'undefined') {
-  role = localStorage.getItem('userRole');
-}
+    if (typeof window !== 'undefined') {
+      role = localStorage.getItem('userRole');
+    }
     
-    const form = useForm<FormData>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            firstName: '',
-            lastName: '',
-            nationalId: '',
-            oldPassword: '',
-            newPassword: '',
-            confirmPassword: '',
-        },
-    });
-
     useEffect(() => {
         if (!isUserLoading && !user) {
             router.push('/');
         }
-        if (user && firestore) {
+        if (user && firestore && !userProfile) {
             const fetchUserProfile = async () => {
                 const userDocRef = doc(firestore, 'users', user.uid);
                 const userDocSnap = await getDoc(userDocRef);
                 if (userDocSnap.exists()) {
                     const profileData = userDocSnap.data() as AppUser;
                     setUserProfile(profileData);
-                    form.reset({
-                        firstName: profileData.firstName,
-                        lastName: profileData.lastName,
-                        nationalId: profileData.nationalId,
-                    });
                 } else {
-                    // Fallback to auth data if firestore doc doesn't exist
                      const displayName = user.displayName || '';
                      const nameParts = displayName.split(' ');
-                     form.reset({
+                     setUserProfile({
+                        id: user.uid,
                         firstName: nameParts[0] || '',
                         lastName: nameParts.slice(1).join(' ') || '',
-                        nationalId: '', // Cannot get this from auth
+                        nationalId: '', 
+                        role: role as 'student' | 'teacher'
                     });
                 }
             };
             fetchUserProfile();
         }
-    }, [user, isUserLoading, router, form, firestore]);
+    }, [user, isUserLoading, router, firestore, userProfile, role]);
+
+
+    const form = useForm<FormData>({
+        resolver: zodResolver(formSchema),
+        values: { // Changed from defaultValues to values
+            firstName: userProfile?.firstName || '',
+            lastName: userProfile?.lastName || '',
+            nationalId: userProfile?.nationalId || '',
+            oldPassword: '',
+            newPassword: '',
+            confirmPassword: '',
+        },
+    });
 
     const onSubmit: SubmitHandler<FormData> = async (data) => {
         setLoading(true);
@@ -342,3 +338,6 @@ if (typeof window !== 'undefined') {
     
 
 
+
+
+    
