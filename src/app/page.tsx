@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Briefcase, Key, ArrowRight, UserPlus, Fingerprint } from 'lucide-react';
+import { User, Briefcase, Key, ArrowRight, UserPlus, Fingerprint, Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { doc, setDoc } from 'firebase/firestore';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -99,6 +99,8 @@ export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<Role>('student');
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const auth = useAuth();
   const firestore = useFirestore();
@@ -141,6 +143,13 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
+  const togglePasswordVisibility = (field: 'password' | 'confirmPassword') => {
+    const setShow = field === 'password' ? setShowPassword : setShowConfirmPassword;
+    setShow(true);
+    setTimeout(() => {
+      setShow(false);
+    }, 2000);
+  };
 
   const handleRoleChange = (role: Role) => {
     setSelectedRole(role);
@@ -377,16 +386,19 @@ export default function LoginPage() {
                   render={({ field }) => (
                     <FormItem>
                        <FormLabel className="sr-only">رمز عبور</FormLabel>
-                        <div className="relative">
+                        <div className="relative flex items-center">
                             <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
                             <FormControl>
                                 <Input 
-                                type="password" 
+                                type={showPassword ? 'text' : 'password'}
                                 placeholder="رمز عبور" 
-                                className="pl-10 text-right"
+                                className="pl-10 pr-10 text-right"
                                 {...field}
                                 />
                             </FormControl>
+                             <button type="button" onMouseDown={() => togglePasswordVisibility('password')} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 cursor-pointer">
+                                {showPassword ? <EyeOff className="w-5 h-5 text-muted-foreground" /> : <Eye className="w-5 h-5 text-muted-foreground" />}
+                            </button>
                         </div>
                         <FormMessage className="text-right" />
                     </FormItem>
@@ -400,17 +412,20 @@ export default function LoginPage() {
                     render={({ field }) => (
                        <FormItem>
                          <FormLabel className="sr-only">تکرار رمز عبور</FormLabel>
-                          <div className="relative">
+                          <div className="relative flex items-center">
                             <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                             <FormControl>
                                 <Input 
-                                type="password" 
+                                type={showConfirmPassword ? 'text' : 'password'}
                                 placeholder="تکرار رمز عبور" 
-                                className="pl-10 text-right"
+                                className="pl-10 pr-10 text-right"
                                 disabled={isPasswordInvalid}
                                 {...field}
                                 />
                             </FormControl>
+                            <button type="button" onMouseDown={() => togglePasswordVisibility('confirmPassword')} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 cursor-pointer" disabled={isPasswordInvalid}>
+                                {showConfirmPassword ? <EyeOff className="w-5 h-5 text-muted-foreground" /> : <Eye className="w-5 h-5 text-muted-foreground" />}
+                            </button>
                           </div>
                           <FormMessage className="text-right" />
                        </FormItem>
