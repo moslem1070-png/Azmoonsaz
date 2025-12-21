@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
-import { ArrowRight, Trophy, BarChart, Users, Percent } from 'lucide-react';
+import { ArrowRight, Trophy, BarChart, Users, Percent, BrainCircuit } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
@@ -19,6 +20,25 @@ interface RankedResult {
   studentName: string;
   score: number;
 }
+
+const LoadingAnimation = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+        <motion.div
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+                duration: 1.5,
+                ease: "easeInOut",
+                repeat: Infinity,
+            }}
+        >
+            <BrainCircuit className="w-24 h-24 text-primary" />
+        </motion.div>
+        <p className="mt-4 text-lg text-muted-foreground">در حال بارگذاری...</p>
+    </div>
+);
 
 export default function ExamLeaderboardPage() {
   const router = useRouter();
@@ -105,7 +125,7 @@ export default function ExamLeaderboardPage() {
       <div className="flex flex-col min-h-screen">
         <Header />
         <main className="container mx-auto px-4 py-8 flex-1 flex items-center justify-center">
-          <p>در حال بارگذاری نتایج آزمون...</p>
+          <LoadingAnimation />
         </main>
       </div>
     );

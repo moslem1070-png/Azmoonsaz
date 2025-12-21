@@ -11,13 +11,33 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { Home, CheckCircle, XCircle, HelpCircle, Award } from 'lucide-react';
+import { Home, CheckCircle, XCircle, HelpCircle, Award, BrainCircuit } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { doc, collection, getDocs, query, getDoc } from 'firebase/firestore';
 
 import GlassCard from '@/components/glass-card';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import type { Exam, ExamResult } from '@/lib/types';
+
+const LoadingAnimation = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+        <motion.div
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+                duration: 1.5,
+                ease: "easeInOut",
+                repeat: Infinity,
+            }}
+        >
+            <BrainCircuit className="w-24 h-24 text-primary" />
+        </motion.div>
+        <p className="mt-4 text-lg text-muted-foreground">در حال بارگذاری...</p>
+    </div>
+);
 
 export default function ResultsPage() {
   const params = useParams();
@@ -101,7 +121,7 @@ export default function ResultsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <h1 className="text-2xl">در حال بارگذاری نتایج...</h1>
+        <LoadingAnimation />
       </div>
     );
   }

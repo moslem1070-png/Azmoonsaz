@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Key, User, Fingerprint, Lock } from 'lucide-react';
+import { Key, User, Fingerprint, Lock, BrainCircuit } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, updateEmail } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
@@ -66,6 +67,25 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+const LoadingAnimation = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+        <motion.div
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+                duration: 1.5,
+                ease: "easeInOut",
+                repeat: Infinity,
+            }}
+        >
+            <BrainCircuit className="w-24 h-24 text-primary" />
+        </motion.div>
+        <p className="mt-4 text-lg text-muted-foreground">در حال بارگذاری...</p>
+    </div>
+);
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -207,7 +227,7 @@ export default function ProfilePage() {
     };
     
     if (isUserLoading || !user || !userProfile) {
-        return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
+        return <LoadingAnimation />;
     }
 
     return (

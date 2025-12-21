@@ -2,8 +2,10 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Clock, FileQuestion, CheckCircle, Trophy } from 'lucide-react';
+import { Clock, FileQuestion, CheckCircle, Trophy, BrainCircuit } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +17,26 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import type { Exam, ExamResult } from '@/lib/types';
 
 type Role = 'student' | 'teacher' | 'manager';
+
+const LoadingAnimation = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+        <motion.div
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+                duration: 1.5,
+                ease: "easeInOut",
+                repeat: Infinity,
+            }}
+        >
+            <BrainCircuit className="w-24 h-24 text-primary" />
+        </motion.div>
+        <p className="mt-4 text-lg text-muted-foreground">در حال بارگذاری...</p>
+    </div>
+);
+
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -64,7 +86,7 @@ export default function DashboardPage() {
   const isLoading = isUserLoading || examsLoading || resultsLoading;
 
   if (isLoading || !user || userRole === 'teacher' || userRole === 'manager') {
-    return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
+    return <LoadingAnimation />;
   }
 
   return (

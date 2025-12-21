@@ -8,7 +8,9 @@ import {
   Percent,
   Calendar,
   BookOpen,
+  BrainCircuit,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 
 import Header from '@/components/header';
@@ -16,6 +18,25 @@ import GlassCard from '@/components/glass-card';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import type { HistoryItem, ExamResult, Exam } from '@/lib/types';
+
+const LoadingAnimation = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+        <motion.div
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+                duration: 1.5,
+                ease: "easeInOut",
+                repeat: Infinity,
+            }}
+        >
+            <BrainCircuit className="w-24 h-24 text-primary" />
+        </motion.div>
+        <p className="mt-4 text-lg text-muted-foreground">در حال بارگذاری...</p>
+    </div>
+);
 
 
 export default function HistoryPage() {
@@ -84,7 +105,7 @@ export default function HistoryPage() {
         <div className="flex flex-col min-h-screen">
           <Header />
           <main className="container mx-auto px-4 py-8 flex-1">
-            <div className="flex items-center justify-center">در حال بارگذاری تاریخچه آزمون‌ها...</div>
+            <LoadingAnimation />
           </main>
         </div>
     );

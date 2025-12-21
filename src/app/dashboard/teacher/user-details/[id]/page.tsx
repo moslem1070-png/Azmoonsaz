@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowRight, User as UserIcon, Award, Fingerprint, Calendar, CheckCircle } from 'lucide-react';
+import { ArrowRight, User as UserIcon, Award, Fingerprint, Calendar, CheckCircle, BrainCircuit } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 
 import Header from '@/components/header';
@@ -19,6 +20,25 @@ interface EnrichedExamResult extends ExamResult {
   rank?: number;
   totalParticipants?: number;
 }
+
+const LoadingAnimation = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+        <motion.div
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+                duration: 1.5,
+                ease: "easeInOut",
+                repeat: Infinity,
+            }}
+        >
+            <BrainCircuit className="w-24 h-24 text-primary" />
+        </motion.div>
+        <p className="mt-4 text-lg text-muted-foreground">در حال بارگذاری...</p>
+    </div>
+);
 
 export default function UserDetailsPage() {
   const router = useRouter();
@@ -102,7 +122,7 @@ export default function UserDetailsPage() {
   }
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری اطلاعات کاربر...</div>;
+    return <LoadingAnimation />;
   }
 
   if (!userProfile) {

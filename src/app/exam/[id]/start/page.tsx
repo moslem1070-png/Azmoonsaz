@@ -2,9 +2,10 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Clock, FileQuestion, Users, X, Check, Award, Medal } from 'lucide-react';
+import { Clock, FileQuestion, Users, X, Check, Award, Medal, BrainCircuit } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { motion } from 'framer-motion';
 
 import GlassCard from '@/components/glass-card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,25 @@ interface LeaderboardEntry {
   studentName: string;
   score: number;
 }
+
+const LoadingAnimation = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+        <motion.div
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+                duration: 1.5,
+                ease: "easeInOut",
+                repeat: Infinity,
+            }}
+        >
+            <BrainCircuit className="w-24 h-24 text-primary" />
+        </motion.div>
+        <p className="mt-4 text-lg text-muted-foreground">در حال بارگذاری...</p>
+    </div>
+);
 
 export default function ExamStartPage() {
   const params = useParams();
@@ -118,7 +138,7 @@ export default function ExamStartPage() {
   ];
 
   if (isUserLoading || examLoading || loading) {
-    return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
+    return <LoadingAnimation />;
   }
 
   if (!exam) {

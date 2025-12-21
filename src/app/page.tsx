@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Briefcase, Key, ArrowRight, UserPlus, Fingerprint, Eye, EyeOff } from 'lucide-react';
+import { User, Briefcase, Key, ArrowRight, UserPlus, Fingerprint, Eye, EyeOff, BrainCircuit } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { doc, setDoc } from 'firebase/firestore';
 import { useForm, SubmitHandler } from 'react-hook-form';
@@ -94,6 +94,25 @@ const getValidationSchema = (authMode: AuthMode, selectedRole: Role) => {
     });
 }
 
+const LoadingAnimation = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+        <motion.div
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+                duration: 1.5,
+                ease: "easeInOut",
+                repeat: Infinity,
+            }}
+        >
+            <BrainCircuit className="w-24 h-24 text-primary" />
+        </motion.div>
+        <p className="mt-4 text-lg text-muted-foreground">در حال بارگذاری...</p>
+    </div>
+);
+
 
 export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<Role>('student');
@@ -144,11 +163,13 @@ export default function LoginPage() {
   }, [user, isUserLoading, router]);
 
   const togglePasswordVisibility = (field: 'password' | 'confirmPassword') => {
-    const setShow = field === 'password' ? setShowPassword : setShowConfirmPassword;
-    setShow(true);
-    setTimeout(() => {
-      setShow(false);
-    }, 1000);
+    if (field === 'password') {
+        setShowPassword(true);
+        setTimeout(() => setShowPassword(false), 1000);
+    } else {
+        setShowConfirmPassword(true);
+        setTimeout(() => setShowConfirmPassword(false), 1000);
+    }
   };
 
   const handleRoleChange = (role: Role) => {
@@ -261,7 +282,7 @@ export default function LoginPage() {
   };
   
   if (isUserLoading || user) {
-    return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
+    return <LoadingAnimation />;
   }
 
   return (
@@ -396,7 +417,7 @@ export default function LoginPage() {
                                 {...field}
                                 />
                             </FormControl>
-                             <button type="button" onMouseDown={() => togglePasswordVisibility('password')} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 cursor-pointer">
+                             <button type="button" onClick={() => togglePasswordVisibility('password')} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 cursor-pointer">
                                 {showPassword ? <EyeOff className="w-5 h-5 text-muted-foreground" /> : <Eye className="w-5 h-5 text-muted-foreground" />}
                             </button>
                         </div>
@@ -423,7 +444,7 @@ export default function LoginPage() {
                                 {...field}
                                 />
                             </FormControl>
-                            <button type="button" onMouseDown={() => togglePasswordVisibility('confirmPassword')} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 cursor-pointer" disabled={isPasswordInvalid}>
+                            <button type="button" onClick={() => togglePasswordVisibility('confirmPassword')} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 cursor-pointer" disabled={isPasswordInvalid}>
                                 {showConfirmPassword ? <EyeOff className="w-5 h-5 text-muted-foreground" /> : <Eye className="w-5 h-5 text-muted-foreground" />}
                             </button>
                           </div>

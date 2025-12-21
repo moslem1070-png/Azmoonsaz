@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { FilePlus, Settings, Users, BarChart2 } from 'lucide-react';
+import { FilePlus, Settings, Users, BarChart2, BrainCircuit } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 import Header from '@/components/header';
 import { useUser } from '@/firebase';
@@ -17,6 +18,25 @@ interface DashboardCardProps {
   onClick: () => void;
   disabled?: boolean;
 }
+
+const LoadingAnimation = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+        <motion.div
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+                duration: 1.5,
+                ease: "easeInOut",
+                repeat: Infinity,
+            }}
+        >
+            <BrainCircuit className="w-24 h-24 text-primary" />
+        </motion.div>
+        <p className="mt-4 text-lg text-muted-foreground">در حال بارگذاری...</p>
+    </div>
+);
 
 const DashboardCard = ({ title, description, icon, onClick, disabled }: DashboardCardProps) => (
   <GlassCard
@@ -53,7 +73,7 @@ export default function TeacherDashboardPage() {
   }, [user, isUserLoading, router]);
 
   if (isUserLoading || !user || userRole === 'student') {
-    return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
+    return <LoadingAnimation />;
   }
 
   const getTitle = () => {

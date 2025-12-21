@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, ArrowRight, Check, Clock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Clock, BrainCircuit } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -14,6 +15,25 @@ import { saveExamResult } from '@/lib/results-storage';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import type { Exam, Question } from '@/lib/types';
+
+const LoadingAnimation = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+        <motion.div
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+                duration: 1.5,
+                ease: "easeInOut",
+                repeat: Infinity,
+            }}
+        >
+            <BrainCircuit className="w-24 h-24 text-primary" />
+        </motion.div>
+        <p className="mt-4 text-lg text-muted-foreground">در حال بارگذاری...</p>
+    </div>
+);
 
 export default function ExamPage() {
   const params = useParams();
@@ -112,7 +132,7 @@ export default function ExamPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <h1 className="text-2xl">در حال بارگذاری آزمون...</h1>
+        <LoadingAnimation />
       </div>
     );
   }

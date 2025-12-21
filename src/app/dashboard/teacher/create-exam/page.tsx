@@ -12,7 +12,9 @@ import {
   PlusCircle,
   Loader2,
   Sparkles,
+  BrainCircuit
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { addDoc, collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 import Header from '@/components/header';
@@ -61,6 +63,25 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 type Role = 'student' | 'teacher';
+
+const LoadingAnimation = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+        <motion.div
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+                duration: 1.5,
+                ease: "easeInOut",
+                repeat: Infinity,
+            }}
+        >
+            <BrainCircuit className="w-24 h-24 text-primary" />
+        </motion.div>
+        <p className="mt-4 text-lg text-muted-foreground">در حال بارگذاری...</p>
+    </div>
+);
 
 export default function CreateExamPage() {
   const router = useRouter();
@@ -214,7 +235,7 @@ export default function CreateExamPage() {
   };
   
   if (isUserLoading || !user || userRole === 'student') {
-    return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
+    return <LoadingAnimation />;
   }
 
   return (
