@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Clock, FileQuestion, Users, X, Check, Award } from 'lucide-react';
+import { Clock, FileQuestion, Users, X, Check, Award, Medal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 
@@ -10,7 +10,14 @@ import GlassCard from '@/components/glass-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import type { Exam } from '@/lib/types';
+import type { Exam, User as AppUser, ExamResult } from '@/lib/types';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
+
+interface LeaderboardEntry {
+  studentName: string;
+  score: number;
+}
 
 export default function ExamStartPage() {
   const params = useParams();
@@ -29,6 +36,7 @@ export default function ExamStartPage() {
   const [participants, setParticipants] = useState(0);
   const [loading, setLoading] = useState(true);
   const [questionCount, setQuestionCount] = useState(0);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   useEffect(() => {
     if (!isUserLoading) {
@@ -54,20 +62,33 @@ export default function ExamStartPage() {
         setIsCompleted(resultSnap.exists());
       }
       
-      // Count total participants for this exam
-      const allUsersResultsQuery = query(collection(firestore, 'users'));
-      const usersSnapshot = await getDocs(allUsersResultsQuery);
+      // Fetch all users to get their names
+      const usersSnapshot = await getDocs(collection(firestore, 'users'));
+      const usersMap = new Map(usersSnapshot.docs.map(d => [d.id, d.data() as AppUser]));
+
+      // Fetch all results for the leaderboard
+      const allResults: (ExamResult & {studentId: string})[] = [];
+      for (const userDoc of usersSnapshot.docs) {
+          const userExamResultRef = doc(firestore, 'users', userDoc.id, 'examResults', examId);
+          const userExamResultSnap = await getDoc(userExamResultRef);
+          if(userExamResultSnap.exists()) {
+            allResults.push({ ...userExamResultSnap.data(), studentId: userDoc.id } as ExamResult & {studentId: string});
+          }
+      }
+
+      setParticipants(allResults.length);
       
-      const participantPromises = usersSnapshot.docs.map(async (userDoc) => {
-        const userExamResultRef = doc(firestore, 'users', userDoc.id, 'examResults', examId);
-        const userExamResultSnap = await getDoc(userExamResultRef);
-        return userExamResultSnap.exists() ? 1 : 0;
+      // Create leaderboard
+      const sortedResults = allResults.sort((a, b) => b.scorePercentage - a.scorePercentage);
+      const topThree: LeaderboardEntry[] = sortedResults.slice(0, 3).map(result => {
+        const studentInfo = usersMap.get(result.studentId);
+        return {
+          studentName: studentInfo ? `${studentInfo.firstName} ${studentInfo.lastName}` : 'کاربر ناشناس',
+          score: result.scorePercentage,
+        }
       });
-      
-      const results = await Promise.all(participantPromises);
-      const participantCount = results.reduce((sum, current) => sum + current, 0);
-      setParticipants(participantCount);
-      
+      setLeaderboard(topThree);
+
       // Get question count from subcollection
       const questionsCollectionRef = collection(firestore, 'exams', examId, 'questions');
       const questionsSnapshot = await getDocs(questionsCollectionRef);
@@ -89,6 +110,12 @@ export default function ExamStartPage() {
       router.push(`/exam/${params.id}`);
     }
   };
+
+  const rankColors = [
+    'text-yellow-400', // Gold
+    'text-gray-400',   // Silver
+    'text-yellow-600', // Bronze
+  ];
 
   if (isUserLoading || examLoading || loading) {
     return <div className="flex items-center justify-center min-h-screen">در حال بارگذاری...</div>;
@@ -153,6 +180,24 @@ export default function ExamStartPage() {
               <p className="text-sm text-muted-foreground">شرکت کننده</p>
             </GlassCard>
           </div>
+
+            {leaderboard.length > 0 && (
+                <div className="mb-8">
+                    <h3 className="text-lg font-bold text-right mb-4">نفرات برتر</h3>
+                    <div className="grid grid-cols-1 gap-3">
+                        {leaderboard.map((entry, index) => (
+                        <GlassCard key={index} className="p-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Medal className={`w-6 h-6 ${rankColors[index] || 'text-muted-foreground'}`} />
+                                <span className="font-semibold">{entry.studentName}</span>
+                            </div>
+                            <Badge variant="secondary">{entry.score}%</Badge>
+                        </GlassCard>
+                        ))}
+                    </div>
+                </div>
+            )}
+
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button variant="outline" size="lg" className="w-full sm:w-1/2" onClick={() => router.push('/dashboard')}>
