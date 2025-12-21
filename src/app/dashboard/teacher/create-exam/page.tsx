@@ -91,6 +91,7 @@ export default function CreateExamPage() {
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [numAiQuestions, setNumAiQuestions] = useState(5);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -137,7 +138,7 @@ export default function CreateExamPage() {
       const result = await generateExamQuestions({
         topic: title,
         difficulty,
-        numberOfQuestions: 10,
+        numberOfQuestions: numAiQuestions,
       });
 
       if (result && result.questions) {
@@ -150,7 +151,7 @@ export default function CreateExamPage() {
         replace(newQuestions);
         toast({
           title: 'سوالات با موفقیت تولید شد',
-          description: '۱۰ سوال جدید به فرم اضافه شد. می‌توانید آن‌ها را ویرایش کنید.',
+          description: `${numAiQuestions} سوال جدید به فرم اضافه شد. می‌توانید آن‌ها را ویرایش کنید.`,
         });
       }
     } catch (error) {
@@ -298,10 +299,21 @@ export default function CreateExamPage() {
             <GlassCard className="p-6 sm:p-8">
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 border-b border-white/10 pb-4">
                 <h2 className="text-xl font-bold text-right">سوالات آزمون</h2>
-                <Button type="button" variant="outline" onClick={handleGenerateQuestions} disabled={isGenerating}>
-                  {isGenerating ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Sparkles className="ml-2 h-4 w-4" />}
-                  تولید سوال با هوش مصنوعی
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={numAiQuestions}
+                    onChange={(e) => setNumAiQuestions(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                    className="w-20 text-center"
+                    aria-label="تعداد سوالات برای تولید"
+                  />
+                  <Button type="button" variant="outline" onClick={handleGenerateQuestions} disabled={isGenerating}>
+                    {isGenerating ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Sparkles className="ml-2 h-4 w-4" />}
+                    تولید سوال با هوش مصنوعی
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-6">
