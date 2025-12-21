@@ -196,10 +196,7 @@ export default function OverallResultsPage() {
                           <TableCell className="text-center">{exam.participants}</TableCell>
                           <TableCell className="text-center font-semibold">{exam.averageScore}%</TableCell>
                           <TableCell className="text-left">
-                            <Button variant="ghost" size="sm" className="text-xs">
-                              مشاهده جزئیات
-                              <ChevronLeft className="mr-1 h-3 w-3" />
-                            </Button>
+                            <ChevronLeft className="h-4 w-4 inline-block text-muted-foreground" />
                           </TableCell>
                         </TableRow>
                     ))}
