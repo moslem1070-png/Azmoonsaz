@@ -105,6 +105,11 @@ export default function LoginPage() {
       confirmPassword: '',
     },
   });
+  
+  const watchedPassword = form.watch('password');
+  const passwordError = form.formState.errors.password;
+  const isPasswordInvalid = !watchedPassword || !!passwordError || watchedPassword.length < 8;
+
 
   useEffect(() => {
     form.reset();
@@ -387,6 +392,7 @@ export default function LoginPage() {
                                 type="password" 
                                 placeholder="تکرار رمز عبور" 
                                 className="pl-10 text-right"
+                                disabled={isPasswordInvalid}
                                 {...field}
                                 />
                             </FormControl>
