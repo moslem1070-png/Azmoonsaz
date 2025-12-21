@@ -10,6 +10,7 @@ import GlassCard from '@/components/glass-card';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import type { ExamResult, User as AppUser, Exam } from '@/lib/types';
 
 
