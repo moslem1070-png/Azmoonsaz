@@ -128,6 +128,8 @@ export default function ManageUsersPage() {
   }
 
   const handleViewUser = (userId: string) => {
+    // Don't navigate if clicking on self
+    if (user && userId === user.uid) return;
     router.push(`/dashboard/teacher/user-details/${userId}`);
   };
 
@@ -178,7 +180,11 @@ export default function ManageUsersPage() {
                 </TableHeader>
                 <TableBody>
                   {users.map((u: AppUser) => (
-                    <TableRow key={u.id} className="cursor-pointer hover:bg-white/10" onClick={() => handleViewUser(u.id)}>
+                    <TableRow 
+                        key={u.id} 
+                        className={u.id !== user.uid ? "cursor-pointer hover:bg-white/10" : ""}
+                        onClick={() => handleViewUser(u.id)}
+                    >
                       <TableCell className="font-medium text-right">{`${u.firstName} ${u.lastName}`}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant={getRoleBadgeVariant(u.role as Role)}>
@@ -187,12 +193,14 @@ export default function ManageUsersPage() {
                       </TableCell>
                       <TableCell className="text-right hidden sm:table-cell text-muted-foreground">{u.nationalId}</TableCell>
                       <TableCell className="text-left">
-                        <div className="flex gap-2 justify-end">
-                           <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleViewUser(u.id); }}>
-                              <Eye className="h-4 w-4" />
-                              <span className="sr-only">مشاهده</span>
+                        {u.id === user.uid ? (
+                           <div className="flex justify-end font-semibold text-muted-foreground">شما</div>
+                        ) : (
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleViewUser(u.id); }}>
+                                <Eye className="h-4 w-4" />
+                                <span className="sr-only">مشاهده</span>
                             </Button>
-                          {u.id !== user.uid && (
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="destructive" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
@@ -215,9 +223,8 @@ export default function ManageUsersPage() {
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
-                          )}
-                          {u.id === user.uid && (<div className="w-8"></div>)}
-                        </div>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
