@@ -12,7 +12,9 @@ import {
   PlusCircle,
   Loader2,
   Sparkles,
-  BrainCircuit
+  BrainCircuit,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { addDoc, collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -299,17 +301,22 @@ export default function CreateExamPage() {
             <GlassCard className="p-6 sm:p-8">
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 border-b border-white/10 pb-4">
                 <h2 className="text-xl font-bold text-right">سوالات آزمون</h2>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={numAiQuestions}
-                    onChange={(e) => setNumAiQuestions(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                    className="w-20 text-center"
-                    aria-label="تعداد سوالات برای تولید"
-                  />
-                  <Button type="button" variant="outline" onClick={handleGenerateQuestions} disabled={isGenerating}>
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="flex flex-col items-end gap-2">
+                     <FormLabel>تعداد سوالات برای تولید</FormLabel>
+                     <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => setNumAiQuestions(prev => Math.max(1, prev - 1))}><Minus className="h-4 w-4" /></Button>
+                      <Input
+                        type="number"
+                        readOnly
+                        value={numAiQuestions}
+                        className="w-16 text-center text-lg font-bold"
+                        aria-label="تعداد سوالات برای تولید"
+                      />
+                      <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => setNumAiQuestions(prev => Math.min(20, prev + 1))}><Plus className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                  <Button type="button" variant="outline" onClick={handleGenerateQuestions} disabled={isGenerating} className="self-end">
                     {isGenerating ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Sparkles className="ml-2 h-4 w-4" />}
                     تولید سوال با هوش مصنوعی
                   </Button>
