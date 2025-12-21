@@ -181,14 +181,19 @@ export default function ResultsPage() {
         </div>
         
         {rank && totalParticipants > 0 && (
-          <GlassCard className="p-4 flex items-center justify-center text-center mt-8">
-            <div className="flex items-center gap-3">
-              <Award className="w-7 h-7 text-yellow-400" />
-              <span className="text-lg">
-                رتبه شما: <span className="font-bold">{rank}</span> از <span className="font-bold">{totalParticipants}</span> شرکت‌کننده
-              </span>
+            <div className="mt-8">
+                <p className="text-sm text-muted-foreground mb-3">رتبه شما در این آزمون</p>
+                <GlassCard className="p-4 inline-flex items-center justify-center text-center">
+                    <div className="flex items-center gap-3">
+                        <Award className="w-8 h-8 text-yellow-400" />
+                        <p className="text-xl">
+                            <span className="font-bold text-2xl text-white">{rank}</span>
+                            <span className="mx-1 text-muted-foreground">/</span>
+                            <span className="text-muted-foreground">{totalParticipants}</span>
+                        </p>
+                    </div>
+                </GlassCard>
             </div>
-          </GlassCard>
         )}
 
         <div className="h-48 mt-12" dir="ltr">
