@@ -39,7 +39,7 @@ const formSchema = z.object({
 const getValidationSchema = (authMode: AuthMode, selectedRole: Role) => {
     return formSchema.superRefine((data, ctx) => {
         if (authMode === 'signup' && selectedRole === 'student') {
-            if (!/^\d{10}$/.test(data.nationalId)) {
+            if (data.nationalId && !/^\d{10}$/.test(data.nationalId)) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     message: "کد ملی باید ۱۰ رقم و فقط شامل عدد باشد.",
@@ -62,14 +62,14 @@ const getValidationSchema = (authMode: AuthMode, selectedRole: Role) => {
                     path: ['lastName'],
                 });
             }
-            if (data.password.length < 8) {
+            if (data.password && data.password.length < 8) {
                  ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     message: "رمز عبور باید حداقل ۸ کاراکتر باشد.",
                     path: ['password'],
                 });
             }
-            if (data.password !== data.confirmPassword) {
+            if (data.password && data.confirmPassword && data.password !== data.confirmPassword) {
                  ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     message: "رمز عبور و تکرار آن یکسان نیستند.",
