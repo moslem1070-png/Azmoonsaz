@@ -306,13 +306,12 @@ export default function CreateExamPage() {
                      <FormLabel>تعداد سوالات برای تولید</FormLabel>
                      <div className="flex items-center gap-2">
                       <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => setNumAiQuestions(prev => Math.max(1, prev - 1))}><Minus className="h-4 w-4" /></Button>
-                      <Input
-                        type="number"
-                        readOnly
-                        value={numAiQuestions}
-                        className="w-16 h-10 text-center text-lg font-bold"
+                      <div
+                        className="flex h-10 w-16 items-center justify-center rounded-md border border-input bg-background text-lg font-bold"
                         aria-label="تعداد سوالات برای تولید"
-                      />
+                      >
+                        {numAiQuestions}
+                      </div>
                       <Button type="button" variant="outline" size="icon" className="h-10 w-10" onClick={() => setNumAiQuestions(prev => Math.min(20, prev + 1))}><Plus className="h-4 w-4" /></Button>
                     </div>
                   </div>
