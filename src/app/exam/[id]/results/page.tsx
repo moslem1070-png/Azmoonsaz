@@ -12,7 +12,7 @@ import {
   Cell,
 } from 'recharts';
 import { Home, CheckCircle, XCircle, HelpCircle, Award } from 'lucide-react';
-import { doc, collection, getDocs, query } from 'firebase/firestore';
+import { doc, collection, getDocs, query, getDoc } from 'firebase/firestore';
 
 import GlassCard from '@/components/glass-card';
 import { Button } from '@/components/ui/button';
