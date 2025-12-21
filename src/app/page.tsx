@@ -148,7 +148,7 @@ export default function LoginPage() {
     setShow(true);
     setTimeout(() => {
       setShow(false);
-    }, 2000);
+    }, 1000);
   };
 
   const handleRoleChange = (role: Role) => {
