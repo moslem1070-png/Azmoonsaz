@@ -52,16 +52,17 @@ const formSchema = z.object({
 const getValidationSchema = (authMode: AuthMode, selectedRole: Role) => {
     return formSchema.superRefine((data, ctx) => {
         const nationalId = toEnglishDigits(data.nationalId);
-        if (authMode === 'signup' && selectedRole === 'student') {
-            if (nationalId && !/^\d{10}$/.test(nationalId)) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: "کد ملی باید ۱۰ رقم و فقط شامل عدد باشد.",
-                    path: ['nationalId'],
-                });
-            }
-        }
         if (authMode === 'signup') {
+            // General signup validations
+            if (selectedRole === 'student') {
+                if (nationalId && !/^\d{10}$/.test(nationalId)) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: "کد ملی باید ۱۰ رقم و فقط شامل عدد باشد.",
+                        path: ['nationalId'],
+                    });
+                }
+            }
             if (!data.firstName) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
@@ -76,14 +77,15 @@ const getValidationSchema = (authMode: AuthMode, selectedRole: Role) => {
                     path: ['lastName'],
                 });
             }
-            if (data.password && data.password.length < 8) {
+            if (data.password.length < 8) {
                  ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     message: "رمز عبور باید حداقل ۸ کاراکتر باشد.",
                     path: ['password'],
                 });
             }
-            if (data.password && data.confirmPassword && data.password !== data.confirmPassword) {
+             // Password confirmation validation, now stricter
+            if (data.password !== data.confirmPassword) {
                  ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     message: "رمز عبور و تکرار آن یکسان نیستند.",
