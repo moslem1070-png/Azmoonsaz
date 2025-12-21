@@ -23,6 +23,19 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 type Role = 'student' | 'teacher';
 type AuthMode = 'login' | 'signup';
 
+// Helper function to convert Persian/Arabic digits to English digits
+const toEnglishDigits = (str: string): string => {
+    if (!str) return '';
+    const persianNumbers = [/۰/g, /۱/g, /۲/g, /۳/g, /۴/g, /۵/g, /۶/g, /۷/g, /۸/g, /۹/g];
+    const arabicNumbers  = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /٨/g, /٩/g];
+    let newStr = str;
+    for(let i = 0; i < 10; i++) {
+        newStr = newStr.replace(persianNumbers[i], i.toString()).replace(arabicNumbers[i], i.toString());
+    }
+    return newStr;
+};
+
+
 // Helper function to create a fake email from national ID or username
 const createEmail = (username: string, role: Role) => {
     return `${role}-${username}@quizmaster.com`;
@@ -38,8 +51,9 @@ const formSchema = z.object({
 
 const getValidationSchema = (authMode: AuthMode, selectedRole: Role) => {
     return formSchema.superRefine((data, ctx) => {
+        const nationalId = toEnglishDigits(data.nationalId);
         if (authMode === 'signup' && selectedRole === 'student') {
-            if (data.nationalId && !/^\d{10}$/.test(data.nationalId)) {
+            if (nationalId && !/^\d{10}$/.test(nationalId)) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     message: "کد ملی باید ۱۰ رقم و فقط شامل عدد باشد.",
@@ -135,7 +149,8 @@ export default function LoginPage() {
   
   const handleAuthSubmission: SubmitHandler<z.infer<typeof currentSchema>> = async (data) => {
     setLoading(true);
-    const { nationalId, password, firstName, lastName } = data;
+    const { password, firstName, lastName } = data;
+    const nationalId = toEnglishDigits(data.nationalId); // Convert digits
     const fullName = `${firstName} ${lastName}`.trim();
 
 
