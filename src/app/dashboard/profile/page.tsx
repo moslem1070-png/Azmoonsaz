@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Key, User, Fingerprint, Lock, BrainCircuit } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, updateEmail } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 
@@ -159,7 +159,7 @@ export default function ProfilePage() {
         }
         
         if ((didNationalIdChange || didPasswordChange) && !data.oldPassword) {
-            toast({ variant: 'destructive', title: 'خطا', description: 'برای تغییر کد ملی، باید رمز عبور فعلی را وارد کنید.' });
+            toast({ variant: 'destructive', title: 'خطا', description: 'برای تغییر کد ملی یا رمز عبور، باید رمز عبور فعلی را وارد کنید.' });
             setLoading(false);
             return;
         }
@@ -190,10 +190,8 @@ export default function ProfilePage() {
                 successMessages.push('نام شما با موفقیت به‌روزرسانی شد.');
             }
             
-            // Update Auth email (based on nationalId) if changed
+            // Update Firestore nationalId if changed, but not Firebase Auth email
             if (didNationalIdChange) {
-                const newEmail = createEmailFromNationalId(data.nationalId, userProfile.role);
-                await updateEmail(user, newEmail);
                 firestoreUpdates.nationalId = data.nationalId;
                 successMessages.push('کد ملی شما با موفقیت تغییر کرد.');
             }
@@ -361,3 +359,4 @@ export default function ProfilePage() {
 
 
     
+
