@@ -240,17 +240,22 @@ export default function LoginPage() {
     const email = createEmail(nationalId, selectedRole);
 
     try {
+        await signInWithEmailAndPassword(auth, email, password);
+        
+        // After successful sign-in, THEN check the role from the database.
         const userDocRef = doc(firestore, 'users', nationalId);
         const docSnap = await getDoc(userDocRef);
 
-        // Security update: Check for existence and role mismatch at the same time.
         if (!docSnap.exists() || docSnap.data().role !== selectedRole) {
+            // This case should be rare if signup is controlled, but it's a good safeguard.
+            // It prevents a user from one role from logging in via the other role's portal.
+            await auth.signOut(); // Sign the user out immediately.
             toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
             setLoading(false);
             return;
         }
 
-        await signInWithEmailAndPassword(auth, email, password);
+        // If role matches, proceed with login
         localStorage.setItem('userRole', selectedRole);
         localStorage.setItem('userNationalId', nationalId);
 
@@ -264,6 +269,7 @@ export default function LoginPage() {
 
     } catch (error: any) {
         console.error("Login error:", error);
+        // Generic error for any auth failure (wrong pass, user not found, etc.)
         toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
     } finally {
         setLoading(false);

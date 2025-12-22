@@ -61,16 +61,14 @@ service cloud.firestore {
      *            Teachers/managers can list users.
      */
     match /users/{nationalId} {
-      // Allow reading a user document under two conditions:
-      // 1. The user is signed in and is accessing their own document.
-      // 2. The request is a read-only operation (like from the login page to check role) and not a write.
-      allow get: if (isSignedIn() && resource.data.id == request.auth.uid) || (request.resource == null);
+      // A user can read their own profile document after they have signed in.
+      allow get: if isSignedIn() && resource.data.id == request.auth.uid;
       
       // Allow teachers/managers to list all users for management purposes.
       allow list: if isTeacherOrManager();
 
-      // Allow a user to create their own profile document.
-      // - The user must be signed in.
+      // Allow a user to create their own profile document during signup.
+      // - The user must be signed in (after createUserWithEmailAndPassword).
       // - The nationalId in the path must match the nationalId in the new document.
       // - The `id` field in the new document must match the user's auth UID.
       allow create: if isSignedIn() && request.resource.data.nationalId == nationalId && request.resource.data.id == request.auth.uid;
