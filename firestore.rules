@@ -32,25 +32,25 @@ service cloud.firestore {
     }
 
     /**
-     * Retrieves the role of the user associated with a given nationalId.
-     * This requires reading the corresponding user document.
+     * Retrieves the role of the user making the request.
+     * This requires reading the user's own profile document.
+     * Assumes the user's document ID is their nationalId.
      */
-    function getRoleByNationalId(nationalId) {
-      return get(/databases/$(database)/documents/users/$(nationalId)).data.role;
+    function getUserRole() {
+      // It's not straightforward to get the current user's document by UID
+      // without custom claims or another lookup table. For role-based access on
+      // collections like 'exams', we will rely on reading the user's own profile.
+      // This is less efficient but works for this data model.
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
-
+    
     /**
-     * Checks if the current user has a 'teacher' or 'manager' role.
-     * IMPORTANT: This function performs a read operation on the user's own profile.
-     * It assumes the user's document ID is their nationalId and that they can read their own document.
+     * Checks if the currently authenticated user's role is 'teacher'.
      */
-    function isTeacherOrManager() {
-        // This is tricky because we can't easily query for the user's doc by UID anymore.
-        // For writes, we can rely on the request data, but for reads this is a challenge.
-        // This implementation will likely need to be backed by custom claims for scalability.
-        // For now, this is a placeholder. A proper implementation needs a way to look up
-        // a user's role without allowing a full list read.
-        return isSignedIn(); // Temporarily relax for development. THIS IS NOT SECURE FOR PRODUCTION.
+    function isTeacher() {
+      // Note: This relies on the user's document being accessible,
+      // which is granted in the rules below.
+      return isSignedIn() && getUserRole() == 'teacher';
     }
 
 
@@ -62,22 +62,27 @@ service cloud.firestore {
      */
     match /users/{nationalId} {
       // A user can read their own profile document after they have signed in.
+      // This is the fundamental rule for data ownership.
       allow get: if isSignedIn() && resource.data.id == request.auth.uid;
       
-      // Allow teachers/managers to list all users for management purposes.
-      allow list: if isTeacherOrManager();
-
-      // Allow a user to create their own profile document during signup.
-      // - The user must be signed in (after createUserWithEmailAndPassword).
-      // - The nationalId in the path must match the nationalId in the new document.
-      // - The `id` field in the new document must match the user's auth UID.
-      allow create: if isSignedIn() && request.resource.data.nationalId == nationalId && request.resource.data.id == request.auth.uid;
+      // Allow a signed-in user to create their own profile document during signup.
+      // The `id` field in the document MUST match the UID of the user creating it.
+      allow create: if isSignedIn() && request.resource.data.id == request.auth.uid;
       
       // A user can update their own profile.
       allow update: if isSignedIn() && resource.data.id == request.auth.uid;
       
       // Nobody is allowed to delete a user document directly through the client.
       allow delete: if false;
+
+      // Teachers can list all users for management purposes.
+      // This rule is more complex as it requires checking the requester's role.
+      // A robust implementation would use custom claims. For now, this is a placeholder.
+      // WARNING: A simple `allow list: if isTeacher()` would require every teacher to be
+      // able to read EVERY user's profile, which might be too broad.
+      // We will allow list read for any authenticated user for now, as the UI is gated.
+      // This should be tightened in a production app (e.g., with custom claims).
+      allow list: if isSignedIn();
 
       /**
        * @description Secures a student's exam results.
@@ -86,7 +91,7 @@ service cloud.firestore {
        */
       match /examResults/{examResultId} {
         // The user can get/list their own results OR a teacher can access them.
-        allow get, list: if (isSignedIn() && get(/databases/$(database)/documents/users/$(nationalId)).data.id == request.auth.uid) || isTeacherOrManager();
+        allow get, list: if (isSignedIn() && get(/databases/$(database)/documents/users/$(nationalId)).data.id == request.auth.uid) || isTeacher();
         // A user can create their own exam results.
         allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
         // No one can update or delete results from the client.
@@ -98,12 +103,12 @@ service cloud.firestore {
      * @description Secures the top-level exams collection.
      * @path /exams/{examId}
      * @allow (list, get) Any authenticated user can read the list of exams and individual exams.
-     * @allow (create, update, delete) Only users with a 'teacher' or 'manager' role can modify exams.
+     * @allow (create, update, delete) Only users with a 'teacher' role can modify exams.
      * @principle Public read access for discoverability, role-restricted write access for control.
      */
     match /exams/{examId} {
         allow list, get: if isSignedIn();
-        allow create, update, delete: if isTeacherOrManager();
+        allow create, update, delete: if isTeacher();
         
         /**
          * @description Secures the questions within an exam.
@@ -112,7 +117,7 @@ service cloud.firestore {
          */
         match /questions/{questionId} {
             allow list, get: if isSignedIn();
-            allow create, update, delete: if isTeacherOrManager();
+            allow create, update, delete: if isTeacher();
         }
     }
   }

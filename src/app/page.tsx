@@ -190,24 +190,14 @@ export default function LoginPage() {
     if (authMode === 'signup') {
 
         try {
-            // 1. Check if nationalId already exists as a document ID
-            const userDocRef = doc(firestore, 'users', nationalId);
-            const docSnap = await getDoc(userDocRef);
-
-            if (docSnap.exists()) {
-                toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: 'این کد ملی قبلا ثبت شده است.' });
-                setLoading(false);
-                return;
-            }
-            
-            // 2. If not, proceed with creating the user
+            // 1. Create the user in Firebase Auth
             const email = createEmail(nationalId, selectedRole);
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
             
             await updateProfile(user, { displayName: fullName });
 
-            // 3. Create the user document in Firestore using nationalId as the document ID
+            // 2. Create the user document in Firestore using nationalId as the document ID
             const newUserDoc = {
               id: user.uid,
               nationalId: nationalId,
@@ -216,6 +206,8 @@ export default function LoginPage() {
               role: selectedRole,
             };
             
+            // The document ID is the user's nationalId
+            const userDocRef = doc(firestore, 'users', nationalId);
             await setDoc(userDocRef, newUserDoc);
 
             toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
@@ -227,7 +219,7 @@ export default function LoginPage() {
         } catch(error: any) {
             console.error("Signup error:", error);
             const errorMessage =
-                error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلا در سیستم احراز هویت ثبت شده است.' :
+                error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلا ثبت شده است.' :
                 'خطایی در هنگام پردازش درخواست شما رخ داد.';
             toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: errorMessage });
         } finally {
