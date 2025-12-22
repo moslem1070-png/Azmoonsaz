@@ -42,8 +42,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
 import { generateExamQuestions } from '@/ai/flows/generate-exam-questions';
-import { findRelevantImage } from '@/ai/flows/find-relevant-image';
-import { translateTopicToEnglish } from '@/ai/flows/translate-topic-english';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const questionSchema = z.object({
@@ -62,6 +60,7 @@ const formSchema = z.object({
     required_error: 'انتخاب سطح دشواری الزامی است.',
   }),
   timer: z.coerce.number().min(1, 'زمان آزمون باید حداقل ۱ دقیقه باشد.'),
+  coverImageURL: z.string({ required_error: 'انتخاب عکس جلد الزامی است.' }).url('آدرس عکس معتبر نیست.'),
   questions: z.array(questionSchema).min(1, 'حداقل یک سوال باید اضافه شود.'),
 });
 
@@ -96,6 +95,8 @@ export default function CreateExamPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [numAiQuestions, setNumAiQuestions] = useState(5);
+  
+  const examCovers = PlaceHolderImages.filter(img => img.id.startsWith('exam-cover'));
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -169,34 +170,6 @@ export default function CreateExamPage() {
       setIsGenerating(false);
     }
   };
-  
-  const getRelevantCoverImage = async (farsiTopic: string): Promise<string> => {
-    const examCovers = PlaceHolderImages.filter(img => img.id.startsWith('exam-cover'));
-    const fallbackImage = examCovers[0]?.imageUrl || 'https://picsum.photos/seed/1/600/400';
-
-    if (examCovers.length === 0) {
-        return fallbackImage;
-    }
-
-    try {
-      // 1. Translate the topic to English
-      const { translatedTopic } = await translateTopicToEnglish({ topic: farsiTopic });
-      
-      // 2. Find the best hint using the English topic
-      const availableHints = examCovers.map(img => img.imageHint);
-      const { bestHint } = await findRelevantImage({ topic: translatedTopic, availableHints });
-      
-      const bestImage = examCovers.find(img => img.imageHint === bestHint);
-      
-      return bestImage?.imageUrl || fallbackImage;
-
-    } catch (error) {
-      console.error("AI image selection failed, returning random image.", error);
-      // Fallback to random selection if AI fails
-      const randomIndex = Math.floor(Math.random() * examCovers.length);
-      return examCovers[randomIndex].imageUrl;
-    }
-  };
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     if (!user || !firestore) {
@@ -210,14 +183,12 @@ export default function CreateExamPage() {
     setIsSubmitting(true);
     
     try {
-      const finalCoverImageUrl = await getRelevantCoverImage(data.title);
-
       const examDocRef = await addDoc(collection(firestore, 'exams'), {
         title: data.title,
         description: data.description,
         difficulty: data.difficulty,
         timer: data.timer,
-        coverImageURL: finalCoverImageUrl,
+        coverImageURL: data.coverImageURL,
         teacherId: user.uid,
         createdAt: serverTimestamp(),
       });
@@ -300,6 +271,21 @@ export default function CreateExamPage() {
                         <SelectItem value="Easy">آسان</SelectItem>
                         <SelectItem value="Medium">متوسط</SelectItem>
                         <SelectItem value="Hard">سخت</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                
+                <FormField control={form.control} name="coverImageURL" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>عکس جلد آزمون</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl">
+                      <FormControl><SelectTrigger><SelectValue placeholder="یک عکس جلد برای آزمون انتخاب کنید" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {examCovers.map((image) => (
+                           <SelectItem key={image.id} value={image.imageUrl}>{image.description}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
