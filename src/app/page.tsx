@@ -473,17 +473,21 @@ export default function LoginPage() {
             >
             ورود
             </Button>
-            <div className="h-4 w-px bg-border"></div>
-            <Button
-            variant="link"
-            onClick={() => setAuthMode('signup')}
-            className={cn(
-                'text-muted-foreground transition-colors',
-                authMode === 'signup' && 'font-bold text-accent'
+            {selectedRole === 'student' && (
+                <>
+                    <div className="h-4 w-px bg-border"></div>
+                    <Button
+                    variant="link"
+                    onClick={() => setAuthMode('signup')}
+                    className={cn(
+                        'text-muted-foreground transition-colors',
+                        authMode === 'signup' && 'font-bold text-accent'
+                    )}
+                    >
+                    ثبت‌نام
+                    </Button>
+                </>
             )}
-            >
-            ثبت‌نام
-            </Button>
         </div>
 
       </GlassCard>
