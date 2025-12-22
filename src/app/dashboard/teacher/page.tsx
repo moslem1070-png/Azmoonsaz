@@ -2,14 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { FilePlus, Settings, Users, BarChart2, BrainCircuit, DatabaseZap } from 'lucide-react';
+import { FilePlus, Settings, Users, BarChart2, BrainCircuit } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 import Header from '@/components/header';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser } from '@/firebase';
 import GlassCard from '@/components/glass-card';
-import { migrateUsersToNationalIdKey } from '@/lib/migration';
-import { useToast } from '@/hooks/use-toast';
 
 type Role = 'student' | 'teacher';
 
@@ -19,7 +17,6 @@ interface DashboardCardProps {
   icon: React.ReactNode;
   onClick: () => void;
   disabled?: boolean;
-  className?: string;
 }
 
 const LoadingAnimation = () => (
@@ -41,11 +38,11 @@ const LoadingAnimation = () => (
     </div>
 );
 
-const DashboardCard = ({ title, description, icon, onClick, disabled, className }: DashboardCardProps) => (
+const DashboardCard = ({ title, description, icon, onClick, disabled }: DashboardCardProps) => (
   <GlassCard
     className={`p-6 text-right transition-all duration-300 hover:-translate-y-2 ${
       disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary/50'
-    } ${className}`}
+    }`}
     onClick={!disabled ? onClick : undefined}
   >
     <div className="flex items-start justify-end gap-4">
@@ -61,9 +58,7 @@ const DashboardCard = ({ title, description, icon, onClick, disabled, className 
 export default function TeacherDashboardPage() {
   const router = useRouter();
   const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
   const [userRole, setUserRole] = useState<Role | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     // This will only run on the client side
@@ -76,24 +71,6 @@ export default function TeacherDashboardPage() {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
-
-  const handleMigration = async () => {
-    if (!firestore) {
-      toast({ variant: 'destructive', title: 'خطا', description: 'سرویس پایگاه داده در دسترس نیست.' });
-      return;
-    }
-    if (!confirm('آیا از اجرای اسکریپت انتقال داده‌ها اطمینان دارید؟ این یک عملیات غیرقابل بازگشت است. لطفاً از داده‌های خود پشتیبان تهیه کنید.')) {
-      return;
-    }
-    toast({ title: 'شروع فرآیند انتقال...', description: 'این عملیات ممکن است چند لحظه طول بکشد.' });
-    try {
-      await migrateUsersToNationalIdKey(firestore);
-      toast({ title: 'موفقیت!', description: 'انتقال داده‌های کاربران با موفقیت انجام شد. لطفاً صفحه را رفرش کنید.' });
-    } catch (error: any) {
-      console.error('Migration failed:', error);
-      toast({ variant: 'destructive', title: 'خطا در انتقال', description: error.message || 'مشکلی در اجرای اسکریپت پیش آمد.' });
-    }
-  };
 
   if (isUserLoading || !user || userRole === 'student') {
     return <LoadingAnimation />;
@@ -143,15 +120,6 @@ export default function TeacherDashboardPage() {
                 description="گزارش‌ها و آمارهای کلی نتایج آزمون‌ها را ببینید."
                 icon={<BarChart2 className="w-8 h-8" />}
                 onClick={() => router.push('/dashboard/teacher/results')}
-            />
-            {/* Temporary Migration Card */}
-            <DashboardCard
-                title="اجرای اسکریپت انتقال کاربران"
-                description="مهم: این دکمه را فقط یک بار برای انتقال کاربران به ساختار جدید (ID = کد ملی) اجرا کنید."
-                icon={<DatabaseZap className="w-8 h-8" />}
-                onClick={handleMigration}
-                className="!border-destructive/50 hover:!border-destructive"
-                disabled={!firestore}
             />
         </div>
       </main>
