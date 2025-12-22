@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -69,7 +70,10 @@ export default function ResultsPage() {
   
   useEffect(() => {
     const fetchRank = async () => {
-        if (!firestore || !user || !examId) return;
+        if (!firestore || !nationalId || !examId) {
+            setRankLoading(false);
+            return;
+        }
 
         setRankLoading(true);
 
@@ -94,10 +98,10 @@ export default function ResultsPage() {
         setRank(currentUserRank > 0 ? currentUserRank : null);
         setRankLoading(false);
     };
-    if (nationalId) {
-        fetchRank();
-    }
-  }, [firestore, user, examId, nationalId]);
+
+    fetchRank();
+    
+  }, [firestore, examId, nationalId]);
 
 
   const isLoading = userLoading || examLoading || resultLoading || rankLoading;

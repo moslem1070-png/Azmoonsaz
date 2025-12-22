@@ -63,7 +63,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     const fetchHistoryDetails = async () => {
-      if (!examResults || !firestore || !user) {
+      if (!examResults || !firestore || !nationalId) {
         setIsLoading(resultsLoading);
         return;
       };
@@ -80,7 +80,7 @@ export default function HistoryPage() {
         .filter(u => u.role === 'student');
       
       // 2. Fetch all results for all students and group by examId.
-      const allResultsByExam: Record<string, ExamResult[]> = {};
+      const allResultsByExam: Record<string, (ExamResult & { nationalId: string })[]> = {};
 
       for (const student of studentUsers) {
         const studentResultsSnapshot = await getDocs(collection(firestore, `users/${student.nationalId}/examResults`));
@@ -89,7 +89,7 @@ export default function HistoryPage() {
           if (!allResultsByExam[result.examId]) {
             allResultsByExam[result.examId] = [];
           }
-          allResultsByExam[result.examId].push(result);
+          allResultsByExam[result.examId].push({ ...result, nationalId: student.nationalId });
         });
       }
 
@@ -101,7 +101,7 @@ export default function HistoryPage() {
         const resultsForThisExam = allResultsByExam[result.examId] || [];
         resultsForThisExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
         
-        const rank = resultsForThisExam.findIndex(r => r.studentId === user.uid) + 1;
+        const rank = resultsForThisExam.findIndex(r => r.nationalId === nationalId) + 1;
 
         return {
           id: result.id,
@@ -120,7 +120,7 @@ export default function HistoryPage() {
       setHistory(validItems.sort((a, b) => {
         // Handle potential invalid date strings before creating Date objects
         const dateA = a.date !== 'تاریخ نامشخص' ? new Date(a.date.replace(/(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3')) : new Date(0);
-        const dateB = b.date !== 'تاریخ نامشخص' ? new Date(b.date.replace(/(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3')) : new Date(0);
+        const dateB = b.date !== 'تاریخ نامشخص' ? new Date(b.date.replace(/(\d{4}\/(\d{2})\/(\d{2})/, '$1-$2-$3')) : new Date(0);
         return dateB.getTime() - dateA.getTime();
       }));
 
@@ -128,7 +128,7 @@ export default function HistoryPage() {
     };
 
     fetchHistoryDetails();
-  }, [examResults, firestore, resultsLoading, user]);
+  }, [examResults, firestore, resultsLoading, nationalId]);
 
 
   const isLoadingCombined = isUserLoading || isLoading;
