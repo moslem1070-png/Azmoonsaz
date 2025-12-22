@@ -50,6 +50,8 @@ export default function ExamStartPage() {
     [firestore, examId]
   );
   const { data: exam, isLoading: examLoading } = useDoc<Exam>(examRef);
+  
+  const nationalId = typeof window !== 'undefined' ? localStorage.getItem('userNationalId') : null;
 
   const [isCompleted, setIsCompleted] = useState(false);
   const [participants, setParticipants] = useState(0);
@@ -75,23 +77,24 @@ export default function ExamStartPage() {
       setLoading(true);
 
       // Check if current user has completed the exam
-      if (user) {
-        const resultDocRef = doc(firestore, 'users', user.uid, 'examResults', examId);
+      if (nationalId) {
+        const resultDocRef = doc(firestore, 'users', nationalId, 'examResults', examId);
         const resultSnap = await getDoc(resultDocRef);
         setIsCompleted(resultSnap.exists());
       }
       
       // Fetch all users to get their names
       const usersSnapshot = await getDocs(collection(firestore, 'users'));
-      const usersMap = new Map(usersSnapshot.docs.map(d => [d.id, d.data() as AppUser]));
+      const usersMap = new Map(usersSnapshot.docs.map(d => [d.data().id, d.data() as AppUser]));
 
       // Fetch all results for the leaderboard
       const allResults: (ExamResult & {studentId: string})[] = [];
       for (const userDoc of usersSnapshot.docs) {
+          if(userDoc.data().role !== 'student') continue;
           const userExamResultRef = doc(firestore, 'users', userDoc.id, 'examResults', examId);
           const userExamResultSnap = await getDoc(userExamResultRef);
           if(userExamResultSnap.exists()) {
-            allResults.push({ ...userExamResultSnap.data(), studentId: userDoc.id } as ExamResult & {studentId: string});
+            allResults.push({ ...userExamResultSnap.data(), studentId: userDoc.data().id } as ExamResult & {studentId: string});
           }
       }
 
@@ -119,14 +122,14 @@ export default function ExamStartPage() {
     if (exam) {
         checkCompletionAndParticipants();
     }
-  }, [examId, user, firestore, exam]);
+  }, [examId, user, firestore, exam, nationalId]);
 
 
   const handleStart = () => {
     if (isCompleted) {
       router.push(`/exam/${params.id}/results`);
     } else {
-      router.push(`/exam/${params.id}`);
+      router.replace(`/exam/${params.id}`);
     }
   };
 
@@ -214,7 +217,7 @@ export default function ExamStartPage() {
               <X className="w-5 h-5 ml-2" />
               انصراف
             </Button>
-            <Button size="lg" className="w-full sm:w-1/2 bg-primary/80 hover:bg-primary" onClick={handleStart}>
+            <Button size="lg" className="w-full sm:w-1/2 bg-primary/80 hover:bg-primary" onClick={handleStart} disabled={!isCompleted && questionCount === 0}>
               {isCompleted ? 'مشاهده نتایج' : 'شروع آزمون'}
               {isCompleted ? <Award className="w-5 h-5 mr-2" /> : <Check className="w-5 h-5 mr-2" />}
             </Button>
