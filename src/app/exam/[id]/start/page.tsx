@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import type { Exam, User as AppUser, ExamResult } from '@/lib/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import ExamCoverVector from '@/components/exam-cover-vector';
 
 
 interface LeaderboardEntry {
@@ -157,22 +156,19 @@ export default function ExamStartPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen p-4 bg-gradient-to-br from-[#302851] to-[#1A162E]">
-      <GlassCard className="w-full max-w-2xl overflow-hidden">
-        <div className="relative h-48 sm:h-60 w-full bg-black/20 flex items-center justify-center">
-          <ExamCoverVector category={exam.category} className="w-28 h-28" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-          <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white">{exam.title}</h1>
-          </div>
-          <Badge
-            variant={exam.difficulty === 'Easy' ? 'secondary' : exam.difficulty === 'Medium' ? 'default' : 'destructive'}
-            className="absolute top-4 left-4 text-sm px-3 py-1"
-          >
-            {difficultyMap[exam.difficulty] || exam.difficulty}
-          </Badge>
+      <GlassCard className="w-full max-w-2xl overflow-hidden p-6 sm:p-8">
+        <div className='flex justify-between items-start mb-4'>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white text-right flex-1">{exam.title}</h1>
+            <Badge
+                variant={exam.difficulty === 'Easy' ? 'secondary' : exam.difficulty === 'Medium' ? 'default' : 'destructive'}
+                className="text-sm px-3 py-1"
+            >
+                {difficultyMap[exam.difficulty] || exam.difficulty}
+            </Badge>
         </div>
 
-        <div className="p-6 sm:p-8">
+
+        <div className="p-6 sm:p-0">
           <p className="text-muted-foreground text-right mb-6 leading-relaxed">
             {exam.description || 'توضیحاتی برای این آزمون ارائه نشده است.'}
           </p>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Clock, FileQuestion, CheckCircle, Trophy, BrainCircuit } from 'lucide-react';
+import { Clock, CheckCircle, Trophy, BrainCircuit } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
@@ -13,7 +13,6 @@ import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Exam, ExamResult } from '@/lib/types';
-import ExamCoverVector from '@/components/exam-cover-vector';
 
 type Role = 'student' | 'teacher' | 'manager';
 
@@ -106,36 +105,32 @@ export default function DashboardPage() {
                 };
 
                 return (
-                  <GlassCard key={exam.id} className="flex flex-col overflow-hidden transition-transform duration-300 hover:-translate-y-2">
-                    <div className="relative h-48 w-full bg-black/20 flex items-center justify-center">
-                       <ExamCoverVector category={exam.category} className="w-24 h-24" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                      <Badge
-                        variant={exam.difficulty === 'Easy' ? 'secondary' : exam.difficulty === 'Medium' ? 'default' : 'destructive'}
-                        className="absolute top-3 left-3"
-                      >
-                        {difficultyMap[exam.difficulty] || exam.difficulty}
-                      </Badge>
-                       <h2 className="absolute bottom-4 right-4 text-xl font-bold text-white">{exam.title}</h2>
+                  <GlassCard key={exam.id} className="flex flex-col overflow-hidden transition-transform duration-300 hover:-translate-y-2 p-6">
+                    <div className="flex justify-between items-start mb-4">
+                        <h2 className="text-xl font-bold text-white text-right flex-1">{exam.title}</h2>
+                        <Badge
+                            variant={exam.difficulty === 'Easy' ? 'secondary' : exam.difficulty === 'Medium' ? 'default' : 'destructive'}
+                        >
+                            {difficultyMap[exam.difficulty] || exam.difficulty}
+                        </Badge>
                     </div>
-                    <div className="p-6 flex flex-col flex-1">
-                      <div className="flex justify-between items-center text-muted-foreground text-sm mb-6">
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-accent" />
-                          <span>{exam.timer} دقیقه</span>
+                    
+                    <div className="flex-1 flex flex-col justify-between">
+                        <div className="flex items-center text-muted-foreground text-sm mb-6">
+                            <Clock className="w-4 h-4 text-accent ml-2" />
+                            <span>{exam.timer} دقیقه</span>
                         </div>
-                        {/* Question count will be fetched on the start page */}
-                      </div>
-                      <Button
-                        onClick={() => handleStartExam(exam.id, isCompleted)}
-                        className={cn(
-                          'w-full transition-colors mt-auto',
-                          isCompleted ? 'bg-green-600 hover:bg-green-700' : 'bg-primary/80 hover:bg-primary'
-                        )}
-                      >
-                        {isCompleted ? <Trophy className="ml-2 h-4 w-4" /> : <CheckCircle className="ml-2 h-4 w-4" />}
-                        {isCompleted ? 'مشاهده نتایج' : 'شروع آزمون'}
-                      </Button>
+                        
+                        <Button
+                            onClick={() => handleStartExam(exam.id, isCompleted)}
+                            className={cn(
+                            'w-full transition-colors mt-auto',
+                            isCompleted ? 'bg-green-600 hover:bg-green-700' : 'bg-primary/80 hover:bg-primary'
+                            )}
+                        >
+                            {isCompleted ? <Trophy className="ml-2 h-4 w-4" /> : <CheckCircle className="ml-2 h-4 w-4" />}
+                            {isCompleted ? 'مشاهده نتایج' : 'شروع آزمون'}
+                        </Button>
                     </div>
                   </GlassCard>
                 );

@@ -13,7 +13,6 @@ export type Exam = {
   id: string;
   title: string;
   description?: string;
-  category: string; // Changed from coverImageURL
   difficulty: 'Easy' | 'Medium' | 'Hard';
   timer: number; // in minutes
   teacherId: string; // To know who created the exam

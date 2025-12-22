@@ -44,8 +44,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { generateExamQuestions } from '@/ai/flows/generate-exam-questions';
 import type { Exam, Question } from '@/lib/types';
-import { examCategories } from '@/lib/exam-icons';
-import ExamCoverVector from '@/components/exam-cover-vector';
 
 
 const questionSchema = z.object({
@@ -64,7 +62,6 @@ const formSchema = z.object({
   difficulty: z.enum(['Easy', 'Medium', 'Hard'], {
     required_error: 'انتخاب سطح دشواری الزامی است.',
   }),
-  category: z.string({ required_error: 'انتخاب دسته بندی الزامی است.' }),
   timer: z.coerce.number().min(1, 'زمان آزمون باید حداقل ۱ دقیقه باشد.'),
   questions: z.array(questionSchema).min(1, 'حداقل یک سوال باید اضافه شود.'),
 });
@@ -112,14 +109,11 @@ export default function EditExamPage() {
       title: '',
       description: '',
       difficulty: 'Medium',
-      category: 'General',
       timer: 10,
       questions: [],
     },
   });
   
-  const watchedCategory = form.watch('category');
-
   const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'questions',
@@ -160,7 +154,6 @@ export default function EditExamPage() {
           description: examData.description,
           difficulty: examData.difficulty,
           timer: examData.timer,
-          category: examData.category,
           questions: questionsData.map(q => ({
             id: q.id,
             text: q.text,
@@ -248,7 +241,6 @@ export default function EditExamPage() {
         description: data.description,
         difficulty: data.difficulty,
         timer: data.timer,
-        category: data.category,
         updatedAt: serverTimestamp(),
       });
 
@@ -349,30 +341,6 @@ export default function EditExamPage() {
                   </FormItem>
                 )} />
                 
-                 <FormField control={form.control} name="category" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>دسته بندی</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} dir="rtl">
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="یک دسته بندی برای آزمون انتخاب کنید" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.entries(examCategories).map(([key, value]) => (
-                            <SelectItem key={key} value={key}>{value.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    {watchedCategory && (
-                        <div className="mt-4 p-4 flex items-center justify-center bg-white/5 rounded-lg h-32">
-                           <ExamCoverVector category={watchedCategory} className="w-20 h-20 text-accent" />
-                        </div>
-                    )}
-                  </FormItem>
-                )} />
-
                 <div className="md:col-span-2">
                   <FormField control={form.control} name="description" render={({ field }) => (
                     <FormItem>
