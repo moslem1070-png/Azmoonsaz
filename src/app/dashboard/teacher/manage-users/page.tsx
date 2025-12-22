@@ -142,9 +142,6 @@ export default function ManageUsersPage() {
   }
 
   const handleViewUser = (nationalId: string) => {
-    const currentUserNationalId = localStorage.getItem('userNationalId');
-    // Don't navigate if clicking on self
-    if (nationalId === currentUserNationalId) return;
     router.push(`/dashboard/teacher/user-details/${nationalId}`);
   };
 
@@ -197,8 +194,12 @@ export default function ManageUsersPage() {
                   {users.map((u: AppUser) => (
                     <TableRow 
                         key={u.id} 
-                        className={u.id !== user.uid ? "cursor-pointer hover:bg-white/10" : ""}
-                        onClick={() => handleViewUser(u.nationalId)}
+                        className={u.id === user.uid ? "" : "cursor-pointer hover:bg-white/10"}
+                        onClick={() => {
+                          if (u.id !== user.uid) {
+                            handleViewUser(u.nationalId);
+                          }
+                        }}
                     >
                       <TableCell className="font-medium text-right">{`${u.firstName} ${u.lastName}`}</TableCell>
                       <TableCell className="text-center">
@@ -256,5 +257,3 @@ export default function ManageUsersPage() {
     </div>
   );
 }
-
-    
