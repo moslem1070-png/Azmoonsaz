@@ -243,15 +243,9 @@ export default function LoginPage() {
         const userDocRef = doc(firestore, 'users', nationalId);
         const docSnap = await getDoc(userDocRef);
 
-        if (!docSnap.exists()) {
+        // Security update: Check for existence and role mismatch at the same time.
+        if (!docSnap.exists() || docSnap.data().role !== selectedRole) {
             toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
-            setLoading(false);
-            return;
-        }
-
-        const userData = docSnap.data();
-        if (userData.role !== selectedRole) {
-            toast({ variant: 'destructive', title: 'خطا', description: 'شما با نقش اشتباهی در حال ورود هستید.' });
             setLoading(false);
             return;
         }
@@ -278,7 +272,8 @@ export default function LoginPage() {
   
   const getTitle = () => {
     const roleText = selectedRole === 'teacher' ? 'معلم' : 'دانش‌آموز';
-    return `ایجاد حساب ${roleText}`;
+    const authText = authMode === 'login' ? 'ورود' : 'ثبت نام';
+    return `${authText} ${roleText}`;
   };
 
   const formVariants = {
