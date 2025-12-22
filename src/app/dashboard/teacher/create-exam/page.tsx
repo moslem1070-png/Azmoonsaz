@@ -42,6 +42,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
 import { generateExamQuestions } from '@/ai/flows/generate-exam-questions';
+import { findRelevantImage } from '@/ai/flows/find-relevant-image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const questionSchema = z.object({
@@ -168,14 +169,29 @@ export default function CreateExamPage() {
     }
   };
   
-  const getRandomCoverImage = () => {
+  const getRelevantCoverImage = async (topic: string): Promise<string> => {
     const examCovers = PlaceHolderImages.filter(img => img.id.startsWith('exam-cover'));
+    const fallbackImage = examCovers[0]?.imageUrl || 'https://picsum.photos/seed/1/600/400';
+
     if (examCovers.length === 0) {
-        // Fallback if no specific cover images are found
-        return PlaceHolderImages[0]?.imageUrl || 'https://picsum.photos/seed/1/600/400';
+        return fallbackImage;
     }
-    const randomIndex = Math.floor(Math.random() * examCovers.length);
-    return examCovers[randomIndex].imageUrl;
+
+    try {
+      const availableHints = examCovers.map(img => img.imageHint);
+      const result = await findRelevantImage({ topic, availableHints });
+      
+      const bestHint = result.bestHint;
+      const bestImage = examCovers.find(img => img.imageHint === bestHint);
+      
+      return bestImage?.imageUrl || fallbackImage;
+
+    } catch (error) {
+      console.error("AI image selection failed, returning random image.", error);
+      // Fallback to random selection if AI fails
+      const randomIndex = Math.floor(Math.random() * examCovers.length);
+      return examCovers[randomIndex].imageUrl;
+    }
   };
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
@@ -190,7 +206,7 @@ export default function CreateExamPage() {
     setIsSubmitting(true);
     
     try {
-      const finalCoverImageUrl = getRandomCoverImage();
+      const finalCoverImageUrl = await getRelevantCoverImage(data.title);
 
       const examDocRef = await addDoc(collection(firestore, 'exams'), {
         title: data.title,
