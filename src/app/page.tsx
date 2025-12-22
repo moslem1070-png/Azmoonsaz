@@ -460,33 +460,31 @@ export default function LoginPage() {
           </motion.div>
         </AnimatePresence>
         
-        <div className="flex items-center justify-center space-x-reverse space-x-2">
-            <Button
-            variant="link"
-            onClick={() => setAuthMode('login')}
-            className={cn(
-                'text-muted-foreground transition-colors',
-                authMode === 'login' && 'font-bold text-accent'
-            )}
-            >
-            ورود
-            </Button>
-            {selectedRole === 'student' && (
-                <>
-                    <div className="h-4 w-px bg-border"></div>
-                    <Button
-                    variant="link"
-                    onClick={() => setAuthMode('signup')}
-                    className={cn(
-                        'text-muted-foreground transition-colors',
-                        authMode === 'signup' && 'font-bold text-accent'
-                    )}
-                    >
-                    ثبت‌نام
-                    </Button>
-                </>
-            )}
-        </div>
+        {selectedRole === 'student' && (
+          <div className="flex items-center justify-center space-x-reverse space-x-2">
+              <Button
+              variant="link"
+              onClick={() => setAuthMode('login')}
+              className={cn(
+                  'text-muted-foreground transition-colors',
+                  authMode === 'login' && 'font-bold text-accent'
+              )}
+              >
+              ورود
+              </Button>
+              <div className="h-4 w-px bg-border"></div>
+              <Button
+              variant="link"
+              onClick={() => setAuthMode('signup')}
+              className={cn(
+                  'text-muted-foreground transition-colors',
+                  authMode === 'signup' && 'font-bold text-accent'
+              )}
+              >
+              ثبت‌نام
+              </Button>
+          </div>
+        )}
 
       </GlassCard>
     </div>
