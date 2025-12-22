@@ -35,12 +35,13 @@ service cloud.firestore {
      * @principle A user can create their own profile. Only they can read/update their own data.
      */
     match /users/{userId} {
-      // A user can read/update their own profile document.
-      allow read, update: if isSignedIn() && request.auth.uid == userId;
+      // A user can read/update their own profile document if their auth UID matches the 'id' field in the doc.
+      allow read, update: if isSignedIn() && get(/databases/$(database)/documents/users/$(userId)).data.id == request.auth.uid;
       
       // Allow a signed-in user to create their own profile document during signup.
-      // The document ID MUST match the UID of the user creating it.
-      allow create: if isSignedIn() && request.auth.uid == userId;
+      // The document ID MUST match the nationalId from the resource data.
+      // The 'id' field within the document must match the auth UID.
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.id && userId == request.resource.data.nationalId;
       
       // Nobody is allowed to delete a user document directly through the client.
       allow delete: if false;
@@ -54,10 +55,12 @@ service cloud.firestore {
        * @principle A user can only access their own results. A teacher can read results.
        */
       match /examResults/{examResultId} {
-        // The user can get/list their own results OR a teacher can access them.
-        allow get, list: if (isSignedIn() && request.auth.uid == userId) || isTeacher();
+        // Allow access if the requesting user's UID matches the 'id' field in the parent user document, OR if the user is a teacher.
+        allow get, list: if (isSignedIn() && get(/databases/$(database)/documents/users/$(userId)).data.id == request.auth.uid) || isTeacher();
+        
         // A user can create their own exam results.
         allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+        
         // No one can update or delete results from the client.
         allow update, delete: if false;
       }
@@ -70,7 +73,7 @@ service cloud.firestore {
      */
     match /exams/{examId} {
         // Any authenticated user (student or teacher) can read exams and their questions.
-        allow read: if isSignedIn();
+        allow get, list: if isSignedIn();
         
         // A user can create an exam if they are a signed-in teacher.
         allow create: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher' && request.resource.data.teacherId == request.auth.uid;
@@ -80,7 +83,7 @@ service cloud.firestore {
         
         // This rule allows any authenticated user to also read the questions subcollection.
         match /questions/{questionId} {
-            allow read: if isSignedIn();
+            allow get, list: if isSignedIn();
              // Only the teacher who owns the exam can modify its questions.
             allow write: if isSignedIn() && get(/databases/$(database)/documents/exams/$(examId)).data.teacherId == request.auth.uid;
         }
