@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -5,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useFieldArray, useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import Image from 'next/image';
 import {
   ArrowRight,
   Save,
@@ -116,6 +118,8 @@ export default function EditExamPage() {
       questions: [],
     },
   });
+  
+  const watchedCoverImageURL = form.watch('coverImageURL');
 
   const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
@@ -358,6 +362,11 @@ export default function EditExamPage() {
                       </SelectContent>
                     </Select>
                     <FormMessage />
+                    {watchedCoverImageURL && (
+                      <div className="mt-4 relative h-32 w-full rounded-lg overflow-hidden">
+                        <Image src={watchedCoverImageURL} alt="پیش‌نمایش عکس جلد" fill className="object-cover" />
+                      </div>
+                    )}
                   </FormItem>
                 )} />
 
@@ -468,5 +477,3 @@ export default function EditExamPage() {
     </div>
   );
 }
-
-    
