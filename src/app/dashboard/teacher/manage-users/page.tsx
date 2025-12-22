@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { User as AppUser } from '@/lib/types';
 import { deleteUser } from 'firebase/auth';
+import { cn } from '@/lib/utils';
 
 
 type Role = 'student' | 'teacher';
@@ -69,6 +70,8 @@ export default function ManageUsersPage() {
     [firestore]
   );
   const { data: users, isLoading: usersLoading, error } = useCollection<AppUser>(usersCollection);
+  
+  const teacherNationalId = typeof window !== 'undefined' ? localStorage.getItem('userNationalId') : null;
 
   useEffect(() => {
     const role = localStorage.getItem('userRole') as Role;
@@ -81,13 +84,6 @@ export default function ManageUsersPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const filteredUsers = useMemo(() => {
-    if (!users || !user) return [];
-    // Filter out the currently logged-in teacher from the list
-    const teacherNationalId = localStorage.getItem('userNationalId');
-    if (!teacherNationalId) return users;
-    return users.filter(u => u.nationalId !== teacherNationalId);
-  }, [users, user]);
 
   const handleDeleteUser = async (userToDelete: AppUser) => {
     if (!firestore) return;
@@ -180,7 +176,7 @@ export default function ManageUsersPage() {
 
         <GlassCard className="p-4 sm:p-6">
           {error && <p className='text-destructive text-center p-4'>خطا در بارگذاری کاربران: {error.message}</p>}
-          {filteredUsers && filteredUsers.length > 0 ? (
+          {users && users.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -192,57 +188,67 @@ export default function ManageUsersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.map((u: AppUser) => (
-                    <TableRow 
-                        key={u.id} 
-                        className="cursor-pointer hover:bg-white/10"
-                        onClick={() => handleViewUser(u.nationalId)}
-                    >
-                      <TableCell className="font-medium text-right">{`${u.firstName} ${u.lastName}`}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={getRoleBadgeVariant(u.role as Role)}>
-                          {getRoleText(u.role as Role)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right hidden sm:table-cell text-muted-foreground">{u.nationalId}</TableCell>
-                      <TableCell className="text-left">
-                          <div className="flex gap-2 justify-end">
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleViewUser(u.nationalId); }}>
-                                <Eye className="h-4 w-4" />
-                                <span className="sr-only">مشاهده</span>
-                            </Button>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                                        <Trash2 className="h-4 w-4" />
-                                        <span className="sr-only">حذف</span>
+                  {users.map((u: AppUser) => {
+                    const isCurrentUser = u.nationalId === teacherNationalId;
+                    return (
+                        <TableRow 
+                            key={u.id} 
+                            className={cn(
+                                "hover:bg-white/10",
+                                !isCurrentUser && "cursor-pointer"
+                            )}
+                            onClick={!isCurrentUser ? () => handleViewUser(u.nationalId) : undefined}
+                        >
+                        <TableCell className="font-medium text-right">{`${u.firstName} ${u.lastName}`}</TableCell>
+                        <TableCell className="text-center">
+                            <Badge variant={getRoleBadgeVariant(u.role as Role)}>
+                            {getRoleText(u.role as Role)}
+                            </Badge>
+                        </TableCell>
+                        <TableCell className="text-right hidden sm:table-cell text-muted-foreground">{u.nationalId}</TableCell>
+                        <TableCell className="text-left">
+                            {isCurrentUser ? (
+                                <div className="font-bold text-accent pr-4">شما</div>
+                            ) : (
+                                <div className="flex gap-2 justify-end">
+                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleViewUser(u.nationalId); }}>
+                                        <Eye className="h-4 w-4" />
+                                        <span className="sr-only">مشاهده</span>
                                     </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>آیا از حذف این کاربر مطمئن هستید؟</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                        این عمل کاربر را از پایگاه داده حذف می‌کند. توجه: این عملیات، کاربر را از سیستم احراز هویت فایربیس (Firebase Authentication) حذف نمی‌کند.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>انصراف</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDeleteUser(u)}>
-                                        حذف
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                                                <Trash2 className="h-4 w-4" />
+                                                <span className="sr-only">حذف</span>
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>آیا از حذف این کاربر مطمئن هستید؟</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                این عمل کاربر را از پایگاه داده حذف می‌کند. توجه: این عملیات، کاربر را از سیستم احراز هویت فایربیس (Firebase Authentication) حذف نمی‌کند.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>انصراف</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteUser(u)}>
+                                                حذف
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            )}
+                        </TableCell>
+                        </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">کاربر دیگری برای نمایش وجود ندارد.</p>
+              <p className="text-muted-foreground">هیچ کاربری یافت نشد.</p>
             </div>
           )}
         </GlassCard>
