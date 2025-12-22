@@ -6,7 +6,7 @@ import { FilePlus, Settings, Users, BarChart2, BrainCircuit, DatabaseZap } from 
 import { motion } from 'framer-motion';
 
 import Header from '@/components/header';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import GlassCard from '@/components/glass-card';
 import { migrateUsersToNationalIdKey } from '@/lib/migration';
 import { useToast } from '@/hooks/use-toast';
@@ -61,6 +61,7 @@ const DashboardCard = ({ title, description, icon, onClick, disabled, className 
 export default function TeacherDashboardPage() {
   const router = useRouter();
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const [userRole, setUserRole] = useState<Role | null>(null);
   const { toast } = useToast();
 
@@ -77,13 +78,17 @@ export default function TeacherDashboardPage() {
   }, [user, isUserLoading, router]);
 
   const handleMigration = async () => {
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'سرویس پایگاه داده در دسترس نیست.' });
+      return;
+    }
     if (!confirm('آیا از اجرای اسکریپت انتقال داده‌ها اطمینان دارید؟ این یک عملیات غیرقابل بازگشت است. لطفاً از داده‌های خود پشتیبان تهیه کنید.')) {
       return;
     }
     toast({ title: 'شروع فرآیند انتقال...', description: 'این عملیات ممکن است چند لحظه طول بکشد.' });
     try {
-      await migrateUsersToNationalIdKey();
-      toast({ title: 'موفقیت!', description: 'انتقال داده‌های کاربران با موفقیت انجام شد.' });
+      await migrateUsersToNationalIdKey(firestore);
+      toast({ title: 'موفقیت!', description: 'انتقال داده‌های کاربران با موفقیت انجام شد. لطفاً صفحه را رفرش کنید.' });
     } catch (error: any) {
       console.error('Migration failed:', error);
       toast({ variant: 'destructive', title: 'خطا در انتقال', description: error.message || 'مشکلی در اجرای اسکریپت پیش آمد.' });
@@ -146,6 +151,7 @@ export default function TeacherDashboardPage() {
                 icon={<DatabaseZap className="w-8 h-8" />}
                 onClick={handleMigration}
                 className="!border-destructive/50 hover:!border-destructive"
+                disabled={!firestore}
             />
         </div>
       </main>
