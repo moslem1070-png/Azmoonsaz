@@ -11,7 +11,7 @@ import {
   Film,
   HeartHandshake,
   Orbit,
-  Milestone,
+  Kaaba,
   Binary,
   type LucideIcon,
 } from 'lucide-react';
@@ -32,6 +32,6 @@ export const examCategories: Record<
   Sports: { label: 'ورزش', icon: Trophy },
   Programming: { label: 'برنامه نویسی', icon: TerminalSquare },
   Cinema: { label: 'سینما', icon: Film },
-  Religion: { label: 'دینی', icon: Milestone },
+  Religion: { label: 'دینی', icon: Kaaba },
   Family: { label: 'خانواده', icon: HeartHandshake },
 };
