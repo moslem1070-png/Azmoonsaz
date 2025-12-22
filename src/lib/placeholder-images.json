@@ -2,91 +2,91 @@
   "placeholderImages": [
     {
       "id": "exam-cover-1",
-      "description": "Cover for a general knowledge quiz.",
+      "description": "دانش عمومی",
       "imageUrl": "https://images.unsplash.com/photo-1696952385417-58262e2e7765?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8a25vd2xlZGdlJTIwYm9va3xlbnwwfHx8fDE3NjYwNjAyNDd8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "knowledge book"
     },
     {
       "id": "exam-cover-2",
-      "description": "Cover for a science quiz.",
+      "description": "علوم",
       "imageUrl": "https://images.unsplash.com/photo-1599738797731-05c251166fd8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxzY2llbmNlJTIwdGVjaG5vbG9neXxlbnwwfHx8fDE3NjYwNjY4MDF8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "science technology"
     },
     {
       "id": "exam-cover-3",
-      "description": "Cover for a history quiz.",
+      "description": "تاریخ",
       "imageUrl": "https://images.unsplash.com/photo-1733602502096-280eef450125?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxoaXN0b3J5JTIwYW5jaWVudHxlbnwwfHx8fDE3NjYxMTM5MzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "history ancient"
     },
     {
       "id": "exam-cover-4",
-      "description": "Cover for a math quiz.",
+      "description": "ریاضی",
       "imageUrl": "https://images.unsplash.com/photo-1666071083297-601c9b0701a4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxtYXRoZW1hdGljcyUyMG51bWJlcnN8ZW58MHx8fHwxNzY2MTQ3NzU0fDA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "mathematics numbers"
     },
     {
       "id": "exam-cover-5",
-      "description": "Cover for a literature quiz.",
+      "description": "ادبیات",
       "imageUrl": "https://plus.unsplash.com/premium_photo-1661759609204-9e32a67e235a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxsaXRlcmF0dXJlJTIwcG9ldHJ5fGVufDB8fHx8MTc2NjE0ODAwNXww&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "literature poetry"
     },
     {
       "id": "exam-cover-6",
-      "description": "Cover for a geography quiz.",
+      "description": "جغرافیا",
       "imageUrl": "https://images.unsplash.com/photo-1613511853384-69975775c754?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxnZW9ncmFwaHklMjB3b3JsZCUyMG1hcHxlbnwwfHx8fDE3NjYxNDgwODJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "geography map"
     },
     {
       "id": "exam-cover-7",
-      "description": "Cover for an art quiz.",
+      "description": "هنر",
       "imageUrl": "https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxhcnQlMjBwYWludGluZ3xlbnwwfHx8fDE3NjYxNDgxNDR8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "art painting"
     },
     {
       "id": "exam-cover-8",
-      "description": "Cover for a music quiz.",
+      "description": "موسیقی",
       "imageUrl": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtdXNpYyUyMGNvbmNlcnR8ZW58MHx8fHwxNzY2MTQ4MTc3fDA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "music concert"
     },
     {
       "id": "exam-cover-9",
-      "description": "Cover for a sports quiz.",
+      "description": "ورزش",
       "imageUrl": "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzcG9ydHMlMjBmaXRuZXNzfGVufDB8fHx8MTc2NjE0ODIyNnww&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "sports fitness"
     },
     {
       "id": "exam-cover-10",
-      "description": "Cover for a computer science or programming quiz.",
+      "description": "برنامه نویسی",
       "imageUrl": "https://images.unsplash.com/photo-1542831371-29b0f74f9713?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjb2RpbmclMjBwcm9ncmFtbWluZ3xlbnwwfHx8fDE3NjYxNDgyNzF8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "coding programming"
     },
     {
       "id": "exam-cover-11",
-      "description": "Cover for a cinema or movies quiz.",
+      "description": "سینما",
       "imageUrl": "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjaW5lbWElMjBtb3ZpZXxlbnwwfHx8fDE3NjYxNDgzMTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "cinema movie"
     },
     {
       "id": "exam-cover-12",
-      "description": "A fallback abstract image.",
+      "description": "عمومی",
       "imageUrl": "https://images.unsplash.com/photo-1533134486753-c833f0ed4866?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMHBhdHRlcm58ZW58MHx8fHwxNzY2MTQ4MzQwfDA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "abstract pattern"
     },
     {
       "id": "exam-cover-13",
-      "description": "Cover for a religion or spirituality quiz.",
+      "description": "دینی",
       "imageUrl": "https://images.unsplash.com/photo-1576487928198-a5c8f541e4d3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxyZWxpZ2lvbiUyMHNwaXJpdHVhbGl0eXxlbnwwfHx8fDE3NjYxNTAwMDB8MA&ixlib=rb-4.0.3&q=80&w=1080",
       "imageHint": "religion spirituality"
     },
     {
       "id": "exam-cover-14",
-      "description": "Cover for a family ethics quiz.",
+      "description": "خانواده",
       "imageUrl": "https://images.unsplash.com/photo-1541518763669-27fef04b14ea?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxoYXBweSUyMGZhbWlseXxlbnwwfHx8fDE3NjYxNTAxMDF8MA&ixlib=rb-4.0.3&q=80&w=1080",
       "imageHint": "family ethics"
     },
     {
       "id": "question-image-1",
-      "description": "Image for a geography question about mountains.",
+      "description": "کوهستان",
       "imageUrl": "https://images.unsplash.com/photo-1612441804231-77a36b284856?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxtb3VudGFpbiUyMGxhbmRzY2FwZXxlbnwwfHx8fDE3NjYwNTQzNjN8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "mountain landscape"
     }
