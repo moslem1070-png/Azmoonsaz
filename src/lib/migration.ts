@@ -24,11 +24,11 @@ import type { User } from '@/lib/types';
  *
  * You can call this function from a temporary button or a `useEffect` hook in a protected admin page.
  * 
- * @param firestore - The Firestore instance.
  */
 export const migrateUsersToNationalIdKey = async () => {
   let firestore: Firestore;
   try {
+    // Correctly destructure the firestore instance from the returned object
     firestore = initializeFirebase().firestore;
   } catch (e) {
     console.error("Could not initialize Firestore:", e);
