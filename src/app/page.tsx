@@ -44,7 +44,7 @@ const createEmail = (username: string, role: Role) => {
 const formSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
-  nationalId: z.string().min(1, { message: 'کد ملی الزامی است.'}),
+  nationalId: z.string().min(1, { message: 'کد ملی یا نام کاربری الزامی است.'}),
   password: z.string().min(1, { message: 'رمز عبور الزامی است.'}),
   confirmPassword: z.string(),
 });
@@ -188,12 +188,6 @@ export default function LoginPage() {
 
     // --- SIGNUP LOGIC ---
     if (authMode === 'signup') {
-        // Double-check to prevent teacher signup via form manipulation
-        if (selectedRole === 'teacher') {
-            toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت‌نام معلم از این طریق وجود ندارد.' });
-            setLoading(false);
-            return;
-        }
 
         try {
             // 1. Check if nationalId already exists as a document ID
@@ -201,7 +195,7 @@ export default function LoginPage() {
             const docSnap = await getDoc(userDocRef);
 
             if (docSnap.exists()) {
-                toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: 'این کد ملی قبلا ثبت‌نام کرده است.' });
+                toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: 'این کد ملی یا نام کاربری قبلا ثبت شده است.' });
                 setLoading(false);
                 return;
             }
@@ -215,24 +209,24 @@ export default function LoginPage() {
 
             // 3. Create the user document in Firestore using nationalId as the document ID
             const newUserDoc = {
-              id: nationalId, // Using nationalId as the ID
+              id: user.uid,
               nationalId: nationalId,
               firstName: firstName,
               lastName: lastName,
               role: selectedRole,
             };
             
-            await setDoc(userDocRef, newUserDoc);
+            await setDoc(doc(firestore, 'users', user.uid), newUserDoc);
 
             toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
             
             localStorage.setItem('userRole', selectedRole);
-            router.push('/dashboard');
+            router.push(selectedRole === 'teacher' ? '/dashboard/teacher' : '/dashboard');
 
         } catch(error: any) {
             console.error("Signup error:", error);
             const errorMessage =
-                error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلا در سیستم احراز هویت ثبت شده است.' :
+                error.code === 'auth/email-already-in-use' ? 'این کد ملی یا نام کاربری قبلا در سیستم احراز هویت ثبت شده است.' :
                 'خطایی در هنگام پردازش درخواست شما رخ داد.';
             toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: errorMessage });
         } finally {
@@ -266,10 +260,6 @@ export default function LoginPage() {
   
   const getTitle = () => {
     const roleText = selectedRole === 'teacher' ? 'معلم' : 'دانش‌آموز';
-    // If teacher is selected, always show login title
-    if (selectedRole === 'teacher') {
-        return 'ورود معلم';
-    }
     return authMode === 'login' ? `ورود ${roleText}` : `ثبت‌نام ${roleText}`;
   };
 
@@ -289,8 +279,7 @@ export default function LoginPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-2">{getTitle()}</h1>
           <p className="text-muted-foreground">
-             {selectedRole === 'teacher' ? 'معلمان فقط می‌توانند وارد شوند و امکان ثبت‌نام ندارند.' : 
-              authMode === 'login' ? 'برای ادامه وارد شوید.' : 'برای ساخت حساب کاربری، فرم زیر را تکمیل کنید.'}
+             {authMode === 'login' ? 'برای ادامه وارد شوید.' : 'برای ساخت حساب کاربری، فرم زیر را تکمیل کنید.'}
           </p>
         </div>
 
@@ -381,13 +370,13 @@ export default function LoginPage() {
                   name="nationalId"
                   render={({ field }) => (
                     <FormItem>
-                       <FormLabel className="sr-only">کد ملی</FormLabel>
+                       <FormLabel className="sr-only">{selectedRole === 'student' ? 'کد ملی' : 'نام کاربری'}</FormLabel>
                         <div className="relative">
                             <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
                             <FormControl>
                                 <Input 
                                 type="text" 
-                                placeholder="کد ملی"
+                                placeholder={selectedRole === 'student' ? 'کد ملی' : 'نام کاربری'}
                                 className="pl-10 text-right"
                                 maxLength={selectedRole === 'student' ? 10 : undefined}
                                 {...field}
@@ -460,31 +449,29 @@ export default function LoginPage() {
           </motion.div>
         </AnimatePresence>
         
-        {selectedRole === 'student' && (
-             <div className="flex items-center justify-center space-x-reverse space-x-2">
-                <Button
-                variant="link"
-                onClick={() => setAuthMode('login')}
-                className={cn(
-                    'text-muted-foreground transition-colors',
-                    authMode === 'login' && 'font-bold text-accent'
-                )}
-                >
-                ورود
-                </Button>
-                <div className="h-4 w-px bg-border"></div>
-                <Button
-                variant="link"
-                onClick={() => setAuthMode('signup')}
-                className={cn(
-                    'text-muted-foreground transition-colors',
-                    authMode === 'signup' && 'font-bold text-accent'
-                )}
-                >
-                ثبت‌نام
-                </Button>
-            </div>
-        )}
+        <div className="flex items-center justify-center space-x-reverse space-x-2">
+            <Button
+            variant="link"
+            onClick={() => setAuthMode('login')}
+            className={cn(
+                'text-muted-foreground transition-colors',
+                authMode === 'login' && 'font-bold text-accent'
+            )}
+            >
+            ورود
+            </Button>
+            <div className="h-4 w-px bg-border"></div>
+            <Button
+            variant="link"
+            onClick={() => setAuthMode('signup')}
+            className={cn(
+                'text-muted-foreground transition-colors',
+                authMode === 'signup' && 'font-bold text-accent'
+            )}
+            >
+            ثبت‌نام
+            </Button>
+        </div>
 
       </GlassCard>
     </div>
