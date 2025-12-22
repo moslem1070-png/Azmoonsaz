@@ -58,7 +58,7 @@ export default function UserDetailsPage() {
 
   // Fetch the target user's exam results
   const examResultsCollectionRef = useMemoFirebase(() => (firestore && userProfile ? collection(firestore, `users/${userProfile.nationalId}/examResults`) : null), [firestore, userProfile]);
-  const { data: examResults } = useCollection<ExamResult>(examResultsCollectionRef);
+  const { data: examResults, isLoading: userResultsLoading } = useCollection<ExamResult>(examResultsCollectionRef);
 
   useEffect(() => {
     if (!teacherLoading) {
@@ -71,58 +71,64 @@ export default function UserDetailsPage() {
 
   useEffect(() => {
     const fetchExamDetailsAndRank = async () => {
-        if (!examResults || !firestore || !userProfile) {
-            if (!examResults) setResultsLoading(false);
+        if (userResultsLoading || !examResults || !firestore || !userProfile) {
+            if (!userResultsLoading) setResultsLoading(false);
             return;
         }
         setResultsLoading(true);
     
-        // 1. Fetch all exams and all student users once.
-        const examsSnapshot = await getDocs(collection(firestore, 'exams'));
-        const examsMap = new Map(examsSnapshot.docs.map(doc => [doc.id, doc.data() as Exam]));
+        try {
+            // 1. Fetch all exams and all student users once.
+            const examsSnapshot = await getDocs(collection(firestore, 'exams'));
+            const examsMap = new Map(examsSnapshot.docs.map(doc => [doc.id, doc.data() as Exam]));
 
-        const usersSnapshot = await getDocs(collection(firestore, 'users'));
-        const studentUsers = usersSnapshot.docs
-            .map(doc => doc.data() as AppUser)
-            .filter(u => u.role === 'student');
-        
-        // 2. Fetch all results for all students and group by examId.
-        const allResultsByExam: Record<string, ExamResult[]> = {};
+            const usersQuery = query(collection(firestore, 'users'));
+            const usersSnapshot = await getDocs(usersQuery);
+            const studentUsers = usersSnapshot.docs
+                .map(doc => doc.data() as AppUser)
+                .filter(u => u.role === 'student');
+            
+            // 2. Fetch all results for all students and group by examId.
+            const allResultsByExam: Record<string, (ExamResult & { nationalId: string })[]> = {};
 
-        for (const student of studentUsers) {
-            const studentResultsSnapshot = await getDocs(collection(firestore, `users/${student.nationalId}/examResults`));
-            studentResultsSnapshot.forEach(resultDoc => {
-                const result = resultDoc.data() as ExamResult;
-                if (!allResultsByExam[result.examId]) {
-                    allResultsByExam[result.examId] = [];
-                }
-                allResultsByExam[result.examId].push(result);
+            for (const student of studentUsers) {
+                const studentResultsSnapshot = await getDocs(collection(firestore, `users/${student.nationalId}/examResults`));
+                studentResultsSnapshot.forEach(resultDoc => {
+                    const result = resultDoc.data() as ExamResult;
+                    if (!allResultsByExam[result.examId]) {
+                        allResultsByExam[result.examId] = [];
+                    }
+                    allResultsByExam[result.examId].push({ ...result, nationalId: student.nationalId });
+                });
+            }
+
+            // 3. Process the target user's results to add rank and title.
+            const resultsWithDetails = examResults.map(result => {
+                const examTitle = examsMap.get(result.examId)?.title ?? 'آزمون حذف شده';
+
+                const resultsForThisExam = allResultsByExam[result.examId] || [];
+                resultsForThisExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
+                
+                const rank = resultsForThisExam.findIndex(r => r.nationalId === userProfile.nationalId) + 1;
+                
+                return {
+                ...result,
+                examTitle,
+                rank: rank > 0 ? rank : undefined,
+                totalParticipants: resultsForThisExam.length,
+                };
             });
+        
+            setEnrichedResults(resultsWithDetails.sort((a,b) => b.submissionTime.toMillis() - a.submissionTime.toMillis()));
+        } catch (error) {
+            console.error("Error fetching user details and rank:", error);
+        } finally {
+            setResultsLoading(false);
         }
-
-        // 3. Process the current user's results to add rank and title.
-        const resultsWithDetails = examResults.map(result => {
-            const examTitle = examsMap.get(result.examId)?.title ?? 'آزمون حذف شده';
-
-            const resultsForThisExam = allResultsByExam[result.examId] || [];
-            resultsForThisExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
-            
-            const rank = resultsForThisExam.findIndex(r => r.studentId === userProfile.id) + 1;
-            
-            return {
-              ...result,
-              examTitle,
-              rank: rank > 0 ? rank : undefined,
-              totalParticipants: resultsForThisExam.length,
-            };
-        });
-    
-        setEnrichedResults(resultsWithDetails.sort((a,b) => b.submissionTime.toMillis() - a.submissionTime.toMillis()));
-        setResultsLoading(false);
     };
 
     fetchExamDetailsAndRank();
-  }, [examResults, firestore, userProfile]);
+  }, [examResults, userResultsLoading, firestore, userProfile]);
 
   const isLoading = teacherLoading || profileLoading;
   

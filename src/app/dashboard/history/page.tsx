@@ -12,7 +12,7 @@ import {
   BrainCircuit,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore';
 
 import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
@@ -47,7 +47,7 @@ export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch the user's exam results
+  // Fetch the current user's exam results
   const nationalId = typeof window !== 'undefined' ? localStorage.getItem('userNationalId') : null;
   const examResultsCollection = useMemoFirebase(
     () => (firestore && nationalId ? collection(firestore, 'users', nationalId, 'examResults') : null),
@@ -70,65 +70,74 @@ export default function HistoryPage() {
 
       setIsLoading(true);
 
-      // 1. Fetch all exams and all student users once.
-      const examsSnapshot = await getDocs(collection(firestore, 'exams'));
-      const examsMap = new Map(examsSnapshot.docs.map(doc => [doc.id, doc.data() as Exam]));
+      try {
+        // 1. Fetch all exams and all student users once.
+        const examsSnapshot = await getDocs(collection(firestore, 'exams'));
+        const examsMap = new Map(examsSnapshot.docs.map(doc => [doc.id, doc.data() as Exam]));
 
-      const usersSnapshot = await getDocs(collection(firestore, 'users'));
-      const studentUsers = usersSnapshot.docs
-        .map(doc => doc.data() as AppUser)
-        .filter(u => u.role === 'student');
-      
-      // 2. Fetch all results for all students and group by examId.
-      const allResultsByExam: Record<string, (ExamResult & { nationalId: string })[]> = {};
-
-      for (const student of studentUsers) {
-        const studentResultsSnapshot = await getDocs(collection(firestore, `users/${student.nationalId}/examResults`));
-        studentResultsSnapshot.forEach(resultDoc => {
-          const result = resultDoc.data() as ExamResult;
-          if (!allResultsByExam[result.examId]) {
-            allResultsByExam[result.examId] = [];
-          }
-          allResultsByExam[result.examId].push({ ...result, nationalId: student.nationalId });
-        });
-      }
-
-      // 3. Process the current user's results to add rank and title.
-      const enrichedHistory = examResults.map(result => {
-        const examData = examsMap.get(result.examId);
-        if (!examData) return null; // Exam might have been deleted
-
-        const resultsForThisExam = allResultsByExam[result.examId] || [];
-        resultsForThisExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
+        const usersQuery = query(collection(firestore, 'users'));
+        const usersSnapshot = await getDocs(usersQuery);
+        const studentUsers = usersSnapshot.docs
+            .map(doc => doc.data() as AppUser)
+            .filter(u => u.role === 'student');
         
-        const rank = resultsForThisExam.findIndex(r => r.nationalId === nationalId) + 1;
+        // 2. Fetch all results for all students and group by examId.
+        const allResultsByExam: Record<string, (ExamResult & { nationalId: string })[]> = {};
 
-        return {
-          id: result.id,
-          examId: result.examId,
-          title: examData.title,
-          date: result.submissionTime?.toDate ? result.submissionTime.toDate().toLocaleDateString('fa-IR') : 'تاریخ نامشخص',
-          score: result.scorePercentage,
-          correctAnswers: result.correctness,
-          totalQuestions: result.totalQuestions || 0,
-          rank: rank > 0 ? rank : undefined,
-        };
-      });
-      
-      const validItems = enrichedHistory.filter((item): item is HistoryItem => item !== null);
+        for (const student of studentUsers) {
+          const studentResultsSnapshot = await getDocs(collection(firestore, `users/${student.nationalId}/examResults`));
+          studentResultsSnapshot.forEach(resultDoc => {
+            const result = resultDoc.data() as ExamResult;
+            if (!allResultsByExam[result.examId]) {
+              allResultsByExam[result.examId] = [];
+            }
+            allResultsByExam[result.examId].push({ ...result, nationalId: student.nationalId });
+          });
+        }
 
-      setHistory(validItems.sort((a, b) => {
-        // Handle potential invalid date strings before creating Date objects
-        const dateA = a.date !== 'تاریخ نامشخص' ? new Date(a.date.replace(/(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3')) : new Date(0);
-        const dateB = b.date !== 'تاریخ نامشخص' ? new Date(b.date.replace(/(\d{4}\/(\d{2})\/(\d{2})/, '$1-$2-$3')) : new Date(0);
-        return dateB.getTime() - dateA.getTime();
-      }));
+        // 3. Process the current user's results to add rank and title.
+        const enrichedHistory = examResults.map(result => {
+          const examData = examsMap.get(result.examId);
+          if (!examData) return null; // Exam might have been deleted
 
-      setIsLoading(false);
+          const resultsForThisExam = allResultsByExam[result.examId] || [];
+          resultsForThisExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
+          
+          const rank = resultsForThisExam.findIndex(r => r.nationalId === nationalId) + 1;
+
+          return {
+            id: result.id,
+            examId: result.examId,
+            title: examData.title,
+            date: result.submissionTime?.toDate ? result.submissionTime.toDate().toLocaleDateString('fa-IR') : 'تاریخ نامشخص',
+            score: result.scorePercentage,
+            correctAnswers: result.correctness,
+            totalQuestions: result.totalQuestions || 0,
+            rank: rank > 0 ? rank : undefined,
+          };
+        });
+        
+        const validItems = enrichedHistory.filter((item): item is HistoryItem => item !== null);
+
+        validItems.sort((a, b) => {
+          const dateA = new Date(a.date.replace(/(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3'));
+          const dateB = new Date(b.date.replace(/(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3'));
+          return dateB.getTime() - dateA.getTime();
+        });
+        
+        setHistory(validItems);
+
+      } catch (error) {
+          console.error("Error fetching history details:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    fetchHistoryDetails();
-  }, [examResults, firestore, resultsLoading, nationalId]);
+    if (!resultsLoading) {
+      fetchHistoryDetails();
+    }
+  }, [examResults, firestore, resultsLoading, nationalId, user]);
 
 
   const isLoadingCombined = isUserLoading || isLoading;
