@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { ArrowRight, Trash2, Eye, BrainCircuit } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { collection, deleteDoc, doc, getDoc, writeBatch } from 'firebase/firestore';
@@ -81,15 +81,13 @@ export default function ManageUsersPage() {
     }
   }, [user, isUserLoading, router]);
 
+  const filteredUsers = useMemo(() => {
+    if (!users || !user) return [];
+    return users.filter(u => u.id !== user.uid);
+  }, [users, user]);
+
   const handleDeleteUser = async (userToDelete: AppUser) => {
-    if (!firestore || !user || user.uid === userToDelete.id) {
-        toast({
-            variant: 'destructive',
-            title: 'خطا',
-            description: 'شما نمی‌توانید حساب کاربری خودتان را حذف کنید.',
-        });
-        return;
-    }
+    if (!firestore) return;
     
     try {
         const batch = writeBatch(firestore);
@@ -179,7 +177,7 @@ export default function ManageUsersPage() {
 
         <GlassCard className="p-4 sm:p-6">
           {error && <p className='text-destructive text-center p-4'>خطا در بارگذاری کاربران: {error.message}</p>}
-          {users && users.length > 0 ? (
+          {filteredUsers && filteredUsers.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -191,11 +189,11 @@ export default function ManageUsersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((u: AppUser) => (
+                  {filteredUsers.map((u: AppUser) => (
                     <TableRow 
                         key={u.id} 
-                        className={u.id === user.uid ? "" : "cursor-pointer hover:bg-white/10"}
-                        onClick={u.id === user.uid ? undefined : () => handleViewUser(u.nationalId)}
+                        className="cursor-pointer hover:bg-white/10"
+                        onClick={() => handleViewUser(u.nationalId)}
                     >
                       <TableCell className="font-medium text-right">{`${u.firstName} ${u.lastName}`}</TableCell>
                       <TableCell className="text-center">
@@ -205,9 +203,6 @@ export default function ManageUsersPage() {
                       </TableCell>
                       <TableCell className="text-right hidden sm:table-cell text-muted-foreground">{u.nationalId}</TableCell>
                       <TableCell className="text-left">
-                        {u.id === user.uid ? (
-                           <div className="flex justify-end font-semibold text-muted-foreground pr-2">شما</div>
-                        ) : (
                           <div className="flex gap-2 justify-end">
                             <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleViewUser(u.nationalId); }}>
                                 <Eye className="h-4 w-4" />
@@ -236,7 +231,6 @@ export default function ManageUsersPage() {
                                 </AlertDialogContent>
                             </AlertDialog>
                           </div>
-                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -245,7 +239,7 @@ export default function ManageUsersPage() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">هیچ کاربری یافت نشد.</p>
+              <p className="text-muted-foreground">کاربر دیگری برای نمایش وجود ندارد.</p>
             </div>
           )}
         </GlassCard>
