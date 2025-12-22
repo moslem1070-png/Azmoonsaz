@@ -7,10 +7,10 @@
  * - Access control prioritizes path-based ownership and role-based checks where appropriate.
  *
  * Data Structure:
- * - /users/{userId}: Private user profile. Only the user can read/write their own profile.
+ * - /users/{nationalId}: Private user profile. The document ID is the user's national code.
  * - /exams/{examId}: Publicly readable list of exams. Only teachers/admins can write.
  * - /exams/{examId}/questions/{questionId}: Questions inherit permissions from the parent exam.
- * - /users/{userId}/examResults/{examResultId}: Private exam results. Only the student can read/write their own results.
+ * - /users/{nationalId}/examResults/{examResultId}: Private exam results.
  *
  * Key Security Decisions:
  * - Default Deny: All paths are closed by default. Access is only granted explicitly.
@@ -39,6 +39,14 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    
+    /**
+     * Checks if the user's nationalId (from their own profile) matches the document ID.
+     * This enforces ownership when document ID is the nationalId.
+     */
+    function isOwnerByNationalId(nationalId) {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nationalId == nationalId;
+    }
 
     /**
      * Checks for ownership on an existing document. Used for update and delete
@@ -58,9 +66,15 @@ service cloud.firestore {
       if (uid == null) {
         return null;
       }
-      // get() is a cross-document read, which has security and performance implications.
-      // Use it judiciously, primarily for role-based checks on non-user-owned data.
-      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+      // Since user documents are now keyed by nationalId, we cannot directly get() them with UID.
+      // This is a major change. We need a way to get the user's role.
+      // For now, we will assume a user can read their own document to check their role.
+      // A better long-term solution might be custom claims.
+      let userDocId = request.auth.token.email.split('@')[0].substring(8); // extracts nationalId from student-nationalId@...
+      if (request.auth.token.email.startsWith('teacher-')) {
+          userDocId = request.auth.token.email.split('@')[0].substring(8); // extracts username from teacher-username@...
+      }
+      return get(/databases/$(database)/documents/users/$(userDocId)).data.role;
     }
 
     /**
@@ -73,35 +87,33 @@ service cloud.firestore {
 
 
     /**
-     * @description Secures a user's profile document. Users can create their own profile,
-     *   and only they can read, update, or delete it. Listing all users is forbidden unless the user is a manager.
-     * @path /users/{userId}
-     * @allow (get) User 'user-abc' reading their own profile at `/users/user-abc`.
-     * @allow (list) A user with the 'manager' role listing all users.
-     * @deny (get) User 'user-abc' trying to read the profile document at `/users/user-xyz`.
-     * @principle Enforces Self-Creation and strict Ownership for user profiles, with an exception for managers.
+     * @description Secures a user's profile document. The document ID is now the nationalId.
+     * @path /users/{nationalId}
+     * @principle Users can create their own profile. Only they can read/update their own data.
      */
-    match /users/{userId} {
-      allow get: if isOwner(userId);
+    match /users/{nationalId} {
+      // A user can read their own profile. We must now verify based on the content of the document.
+      allow get: if isSignedIn() && resource.data.id == request.auth.uid;
       allow list: if isTeacherOrManager(); // Allow managers/teachers to list users
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+
+      // A user can create their profile if the document ID (nationalId) matches the nationalId in the resource
+      // AND the auth UID matches the id field in the resource.
+      allow create: if isSignedIn() && request.resource.id == nationalId && request.resource.data.id == request.auth.uid;
+      
+      // A user can update their own profile.
+      allow update: if isSignedIn() && resource.data.id == request.auth.uid;
+      
+      allow delete: if false; // Generally, users should not delete their own profiles.
 
       /**
-       * @description Secures a student's exam results. A student can create their own results
-       *   and can read them, but cannot modify or delete them to ensure data integrity.
-       * @path /users/{userId}/examResults/{examResultId}
-       * @allow (create) Student 'student-456' submitting their result to `/users/student-456/examResults/res-abc`.
-       * @deny (update) Student 'student-456' trying to change their score after submission.
-       * @principle Enforces ownership for creation and reads, but makes results immutable after creation.
+       * @description Secures a student's exam results.
+       * @path /users/{nationalId}/examResults/{examResultId}
+       * @principle A user can only access their own results.
        */
       match /examResults/{examResultId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.studentId == userId;
-        allow update: if false;
-        allow delete: if false;
+        allow get, list: if isSignedIn() && get(/databases/$(database)/documents/users/$(nationalId)).data.id == request.auth.uid;
+        allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+        allow update, delete: if false;
       }
     }
     
@@ -117,10 +129,9 @@ service cloud.firestore {
         allow create, update, delete: if isTeacherOrManager();
         
         /**
-         * @description Secures the questions within an exam. Access is inherited from the
-         *   parent user (teacher) path, ensuring only the exam creator can manage its questions.
+         * @description Secures the questions within an exam.
          * @path /exams/{examId}/questions/{questionId}
-         * @principle Inherits ownership from the top-level path for nested subcollections.
+         * @principle Permissions are inherited from the parent.
          */
         match /questions/{questionId} {
             allow list, get: if isSignedIn();

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Briefcase, Key, ArrowRight, UserPlus, Fingerprint, Eye, EyeOff, BrainCircuit } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -188,61 +188,57 @@ export default function LoginPage() {
 
     // --- SIGNUP LOGIC ---
     if (authMode === 'signup') {
-      const email = createEmail(nationalId, selectedRole);
+        // Double-check to prevent teacher signup via form manipulation
+        if (selectedRole === 'teacher') {
+            toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت‌نام معلم از این طریق وجود ندارد.' });
+            setLoading(false);
+            return;
+        }
 
-      // Double-check to prevent teacher signup via form manipulation
-      if (selectedRole === 'teacher') {
-          toast({ variant: 'destructive', title: 'خطا', description: 'امکان ثبت‌نام معلم از این طریق وجود ندارد.' });
-          setLoading(false);
-          return;
-      }
-      
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        await updateProfile(user, { displayName: fullName });
+        try {
+            // 1. Check if nationalId already exists as a document ID
+            const userDocRef = doc(firestore, 'users', nationalId);
+            const docSnap = await getDoc(userDocRef);
 
-        // Also create a user document in Firestore, identified by the user's UID from Auth
-        const userDocRef = doc(firestore, 'users', user.uid);
-        const newUserDoc = {
-          id: user.uid,
-          nationalId: nationalId,
-          firstName: firstName,
-          lastName: lastName,
-          role: selectedRole,
-        };
-        
-        setDoc(userDocRef, newUserDoc).catch(serverError => {
-            console.error("Firestore user creation failed:", serverError);
-            const permissionError = new FirestorePermissionError({
-              path: userDocRef.path,
-              operation: 'create',
-              requestResourceData: newUserDoc,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-             toast({
-                variant: 'destructive',
-                title: 'خطای پایگاه داده',
-                description: 'حساب کاربری شما ایجاد شد، اما در ذخیره پروفایل مشکلی پیش آمد.'
-            });
-        });
+            if (docSnap.exists()) {
+                toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: 'این کد ملی قبلا ثبت‌نام کرده است.' });
+                setLoading(false);
+                return;
+            }
+            
+            // 2. If not, proceed with creating the user
+            const email = createEmail(nationalId, selectedRole);
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            
+            await updateProfile(user, { displayName: fullName });
 
-        toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
-        
-        localStorage.setItem('userRole', selectedRole);
-        router.push('/dashboard');
+            // 3. Create the user document in Firestore using nationalId as the document ID
+            const newUserDoc = {
+              id: nationalId, // Using nationalId as the ID
+              nationalId: nationalId,
+              firstName: firstName,
+              lastName: lastName,
+              role: selectedRole,
+            };
+            
+            await setDoc(userDocRef, newUserDoc);
 
-      } catch(error: any) {
-         console.error("Signup error:", error);
-         const errorMessage =
-          error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلا ثبت‌نام کرده است.' :
-          'خطایی در هنگام پردازش درخواست شما رخ داد.';
-        toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: errorMessage });
-      } finally {
-        setLoading(false);
-      }
-      return; // End signup logic
+            toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
+            
+            localStorage.setItem('userRole', selectedRole);
+            router.push('/dashboard');
+
+        } catch(error: any) {
+            console.error("Signup error:", error);
+            const errorMessage =
+                error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلا در سیستم احراز هویت ثبت شده است.' :
+                'خطایی در هنگام پردازش درخواست شما رخ داد.';
+            toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: errorMessage });
+        } finally {
+            setLoading(false);
+        }
+        return; // End signup logic
     }
     
     // --- LOGIN LOGIC ---
@@ -293,7 +289,7 @@ export default function LoginPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-2">{getTitle()}</h1>
           <p className="text-muted-foreground">
-             {selectedRole === 'teacher' ? 'معلمان فقط می‌توانند وارد شوند.' : 
+             {selectedRole === 'teacher' ? 'معلمان فقط می‌توانند وارد شوند و امکان ثبت‌نام ندارند.' : 
               authMode === 'login' ? 'برای ادامه وارد شوید.' : 'برای ساخت حساب کاربری، فرم زیر را تکمیل کنید.'}
           </p>
         </div>
