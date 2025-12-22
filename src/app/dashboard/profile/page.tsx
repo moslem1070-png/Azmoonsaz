@@ -7,8 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Key, User, Fingerprint, Lock, BrainCircuit } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, updateEmail } from 'firebase/auth';
+import { doc, getDoc, updateDoc, writeBatch } from 'firebase/firestore';
 
 
 import Header from '@/components/header';
@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useAuth } from '@/firebase';
 import type { User as AppUser } from '@/lib/types';
 
 
@@ -29,8 +29,8 @@ const getRoleFromEmail = (email?: string | null): string => {
 }
 
 // Helper function to create a fake email from national ID
-const createEmailFromNationalId = (nationalId: string, role: string) => {
-    return `${role}-${nationalId}@quizmaster.com`;
+const createEmail = (username: string, role: string) => {
+    return `${role}-${username}@quizmaster.com`;
 }
 
 const formSchema = z.object({
@@ -91,10 +91,11 @@ export default function ProfilePage() {
     const router = useRouter();
     const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
+    const auth = useAuth();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [userProfile, setUserProfile] = useState<AppUser | null>(null);
-    let role = null;
+    let role: string | null = null;
     if (typeof window !== 'undefined') {
       role = localStorage.getItem('userRole');
     }
@@ -105,26 +106,30 @@ export default function ProfilePage() {
         }
         if (user && firestore && !userProfile) {
             const fetchUserProfile = async () => {
-                const userDocRef = doc(firestore, 'users', user.uid);
+                // Since doc ID is nationalId, we can't use user.uid to fetch the doc directly.
+                // We must get the nationalId from localStorage or another source.
+                const storedNationalId = localStorage.getItem('userNationalId');
+                if (!storedNationalId) {
+                    // This can happen if user logs in but hasn't stored their ID yet, or old session.
+                    // We can't fetch the profile, maybe force logout or show error.
+                    console.error("National ID not found in local storage.");
+                    toast({variant: 'destructive', title: 'خطا', description: 'اطلاعات پروفایل یافت نشد، لطفا مجدد وارد شوید.'})
+                    return;
+                }
+
+                const userDocRef = doc(firestore, 'users', storedNationalId);
                 const userDocSnap = await getDoc(userDocRef);
                 if (userDocSnap.exists()) {
                     const profileData = userDocSnap.data() as AppUser;
                     setUserProfile(profileData);
                 } else {
-                     const displayName = user.displayName || '';
-                     const nameParts = displayName.split(' ');
-                     setUserProfile({
-                        id: user.uid,
-                        firstName: nameParts[0] || '',
-                        lastName: nameParts.slice(1).join(' ') || '',
-                        nationalId: '', 
-                        role: role as 'student' | 'teacher'
-                    });
+                     console.error("User document not found in Firestore.");
+                     toast({variant: 'destructive', title: 'خطا', description: 'پروفایل کاربری یافت نشد.'})
                 }
             };
             fetchUserProfile();
         }
-    }, [user, isUserLoading, router, firestore, userProfile, role]);
+    }, [user, isUserLoading, router, firestore, userProfile, toast]);
 
 
     const form = useForm<FormData>({
@@ -137,6 +142,9 @@ export default function ProfilePage() {
             newPassword: '',
             confirmPassword: '',
         },
+        // We need to re-enable revalidation so `values` is updated
+        // when userProfile state changes after the async fetch.
+        reValidateMode: 'onChange',
     });
 
     const onSubmit: SubmitHandler<FormData> = async (data) => {
@@ -179,26 +187,54 @@ export default function ProfilePage() {
             }
 
             let successMessages = [];
-            const userDocRef = doc(firestore, 'users', user.uid);
-            let firestoreUpdates: Partial<AppUser> = {};
 
             // Update Auth displayName if changed
             if (didNameChange) {
                 await updateProfile(user, { displayName: fullName });
-                firestoreUpdates.firstName = data.firstName;
-                firestoreUpdates.lastName = data.lastName;
                 successMessages.push('نام شما با موفقیت به‌روزرسانی شد.');
             }
-            
-            // Update Firestore nationalId if changed, but not Firebase Auth email
+
             if (didNationalIdChange) {
-                firestoreUpdates.nationalId = data.nationalId;
-                successMessages.push('کد ملی شما با موفقیت تغییر کرد.');
-            }
-            
-            // Update Firestore document if there are changes
-            if (Object.keys(firestoreUpdates).length > 0) {
-                 await updateDoc(userDocRef, firestoreUpdates);
+                const newDocRef = doc(firestore, 'users', data.nationalId);
+                const oldDocRef = doc(firestore, 'users', userProfile.nationalId);
+
+                // Check if the new national ID is already taken
+                const newDocSnap = await getDoc(newDocRef);
+                if (newDocSnap.exists()) {
+                    throw new Error('کد ملی جدید قبلاً استفاده شده است.');
+                }
+
+                // Use a batch write to move the document
+                const batch = writeBatch(firestore);
+                
+                const newDocumentData = {
+                    ...userProfile,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    nationalId: data.nationalId,
+                };
+                
+                batch.set(newDocRef, newDocumentData);
+                batch.delete(oldDocRef);
+                
+                // Also update the email in auth
+                const newEmail = createEmail(data.nationalId, userProfile.role);
+                await updateEmail(user, newEmail);
+                
+                await batch.commit();
+
+                // Update local storage
+                localStorage.setItem('userNationalId', data.nationalId);
+                successMessages.push('اطلاعات شما با موفقیت به‌روزرسانی شد.');
+
+            } else if (didNameChange) {
+                // If only name changed, just update the existing document
+                const userDocRef = doc(firestore, 'users', userProfile.nationalId);
+                await updateDoc(userDocRef, {
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                });
+                successMessages.push('نام شما با موفقیت به‌روزرسانی شد.');
             }
 
             // Update password if changed
@@ -208,6 +244,10 @@ export default function ProfilePage() {
             }
 
             toast({ title: 'موفق', description: successMessages.join(' ') || 'اطلاعات با موفقیت به‌روزرسانی شد.' });
+            
+            // Manually update profile state to reflect changes immediately
+            setUserProfile(prev => prev ? ({ ...prev, ...data }) : null);
+
             form.reset({ ...form.getValues(), oldPassword: '', newPassword: '', confirmPassword: '' });
 
         } catch (error: any) {
@@ -217,7 +257,7 @@ export default function ProfilePage() {
                 error.code === 'auth/weak-password' ? 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.' :
                 error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلاً استفاده شده است.' :
                 error.code === 'auth/requires-recent-login' ? 'برای این عملیات نیاز به ورود مجدد است. لطفاً رمز عبور فعلی را وارد کنید.' :
-                'خطایی در به‌روزرسانی اطلاعات رخ داد.';
+                error.message || 'خطایی در به‌روزرسانی اطلاعات رخ داد.';
             toast({ variant: 'destructive', title: 'خطا', description: errorMessage });
         } finally {
             setLoading(false);
@@ -276,7 +316,7 @@ export default function ProfilePage() {
                                 name="nationalId"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>کد ملی</FormLabel>
+                                        <FormLabel>{role === 'student' ? 'کد ملی' : 'نام کاربری'}</FormLabel>
                                         <div className="relative">
                                             <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                             <FormControl>
@@ -359,4 +399,5 @@ export default function ProfilePage() {
 
 
     
+
 

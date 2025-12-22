@@ -216,11 +216,12 @@ export default function LoginPage() {
               role: selectedRole,
             };
             
-            await setDoc(doc(firestore, 'users', user.uid), newUserDoc);
+            await setDoc(userDocRef, newUserDoc);
 
             toast({ title: 'ثبت‌نام موفق', description: 'حساب کاربری شما با موفقیت ایجاد شد.' });
             
             localStorage.setItem('userRole', selectedRole);
+            localStorage.setItem('userNationalId', nationalId);
             router.push(selectedRole === 'teacher' ? '/dashboard/teacher' : '/dashboard');
 
         } catch(error: any) {
@@ -239,8 +240,25 @@ export default function LoginPage() {
     const email = createEmail(nationalId, selectedRole);
 
     try {
+        const userDocRef = doc(firestore, 'users', nationalId);
+        const docSnap = await getDoc(userDocRef);
+
+        if (!docSnap.exists()) {
+            toast({ variant: 'destructive', title: 'خطا', description: 'اطلاعات ورود نامعتبر است.' });
+            setLoading(false);
+            return;
+        }
+
+        const userData = docSnap.data();
+        if (userData.role !== selectedRole) {
+            toast({ variant: 'destructive', title: 'خطا', description: 'شما با نقش اشتباهی در حال ورود هستید.' });
+            setLoading(false);
+            return;
+        }
+
         await signInWithEmailAndPassword(auth, email, password);
         localStorage.setItem('userRole', selectedRole);
+        localStorage.setItem('userNationalId', nationalId);
 
         toast({ title: 'ورود موفق', description: 'خوش آمدید!' });
         
@@ -260,7 +278,7 @@ export default function LoginPage() {
   
   const getTitle = () => {
     const roleText = selectedRole === 'teacher' ? 'معلم' : 'دانش‌آموز';
-    return authMode === 'login' ? `ورود ${roleText}` : `ثبت‌نام ${roleText}`;
+    return `ایجاد حساب ${roleText}`;
   };
 
   const formVariants = {

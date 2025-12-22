@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowRight, User as UserIcon, Award, Fingerprint, Calendar, CheckCircle, BrainCircuit } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query } from 'firebase/firestore';
 
 import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
@@ -43,7 +43,7 @@ const LoadingAnimation = () => (
 export default function UserDetailsPage() {
   const router = useRouter();
   const params = useParams();
-  const userId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const userNationalId = Array.isArray(params.id) ? params.id[0] : params.id;
   
   const { user: teacherUser, isUserLoading: teacherLoading } = useUser();
   const firestore = useFirestore();
@@ -51,12 +51,13 @@ export default function UserDetailsPage() {
   const [enrichedResults, setEnrichedResults] = useState<EnrichedExamResult[]>([]);
   const [resultsLoading, setResultsLoading] = useState(true);
 
-  // Fetch the target user's profile
-  const userDocRef = useMemoFirebase(() => (firestore && userId ? doc(firestore, 'users', userId) : null), [firestore, userId]);
+  // Fetch the target user's profile using nationalId
+  const userDocRef = useMemoFirebase(() => (firestore && userNationalId ? doc(firestore, 'users', userNationalId) : null), [firestore, userNationalId]);
   const { data: userProfile, isLoading: profileLoading } = useDoc<AppUser>(userDocRef);
 
   // Fetch the target user's exam results
-  const examResultsCollectionRef = useMemoFirebase(() => (firestore && userId ? collection(firestore, `users/${userId}/examResults`) : null), [firestore, userId]);
+  // Note: This assumes results are still stored under a subcollection of the user document.
+  const examResultsCollectionRef = useMemoFirebase(() => (firestore && userProfile ? collection(firestore, `users/${userProfile.nationalId}/examResults`) : null), [firestore, userProfile]);
   const { data: examResults } = useCollection<ExamResult>(examResultsCollectionRef);
 
   useEffect(() => {
@@ -70,50 +71,47 @@ export default function UserDetailsPage() {
 
   useEffect(() => {
     const fetchExamDetailsAndRank = async () => {
-      if (!examResults || !firestore) {
-        if (!examResults) setResultsLoading(false);
-        return;
-      }
-      setResultsLoading(true);
-
-      // 1. Fetch all users once to avoid refetching in loop
-      const usersSnapshot = await getDocs(collection(firestore, 'users'));
-      const studentUsers = usersSnapshot.docs.filter(doc => (doc.data() as AppUser).role === 'student');
-
-      const promises = examResults.map(async (result) => {
-        const examDocRef = doc(firestore, 'exams', result.examId);
-        const examSnap = await getDoc(examDocRef);
-        const examTitle = examSnap.exists() ? (examSnap.data() as Exam).title : 'آزمون حذف شده';
-
-        // 2. Fetch all results for this specific exam
-        const allResultsForExam: ExamResult[] = [];
-        for (const studentDoc of studentUsers) {
-          const studentResultRef = doc(firestore, `users/${studentDoc.id}/examResults/${result.examId}`);
-          const studentResultSnap = await getDoc(studentResultRef);
-          if (studentResultSnap.exists()) {
-            allResultsForExam.push(studentResultSnap.data() as ExamResult);
-          }
+        if (!examResults || !firestore || !userProfile) {
+            if (!examResults) setResultsLoading(false);
+            return;
         }
-        
-        // 3. Calculate rank
-        allResultsForExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
-        const currentUserRank = allResultsForExam.findIndex(r => r.studentId === userId) + 1;
-        
-        return {
-          ...result,
-          examTitle,
-          rank: currentUserRank > 0 ? currentUserRank : undefined,
-          totalParticipants: allResultsForExam.length,
-        };
-      });
-
-      const resultsWithDetails = await Promise.all(promises);
-      setEnrichedResults(resultsWithDetails.sort((a,b) => b.submissionTime.toMillis() - a.submissionTime.toMillis()));
-      setResultsLoading(false);
+        setResultsLoading(true);
+    
+        const usersSnapshot = await getDocs(collection(firestore, 'users'));
+    
+        const promises = examResults.map(async (result) => {
+            const examDocRef = doc(firestore, 'exams', result.examId);
+            const examSnap = await getDoc(examDocRef);
+            const examTitle = examSnap.exists() ? (examSnap.data() as Exam).title : 'آزمون حذف شده';
+    
+            const allResultsForExam: ExamResult[] = [];
+            for (const studentDoc of usersSnapshot.docs) {
+                if (studentDoc.data().role !== 'student') continue;
+                const studentResultRef = doc(firestore, `users/${studentDoc.id}/examResults/${result.examId}`);
+                const studentResultSnap = await getDoc(studentResultRef);
+                if (studentResultSnap.exists()) {
+                    allResultsForExam.push(studentResultSnap.data() as ExamResult);
+                }
+            }
+            
+            allResultsForExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
+            const currentUserRank = allResultsForExam.findIndex(r => r.studentId === userProfile.id) + 1;
+            
+            return {
+              ...result,
+              examTitle,
+              rank: currentUserRank > 0 ? currentUserRank : undefined,
+              totalParticipants: allResultsForExam.length,
+            };
+        });
+    
+        const resultsWithDetails = await Promise.all(promises);
+        setEnrichedResults(resultsWithDetails.sort((a,b) => b.submissionTime.toMillis() - a.submissionTime.toMillis()));
+        setResultsLoading(false);
     };
 
     fetchExamDetailsAndRank();
-  }, [examResults, firestore, userId]);
+  }, [examResults, firestore, userProfile]);
 
   const isLoading = teacherLoading || profileLoading;
   

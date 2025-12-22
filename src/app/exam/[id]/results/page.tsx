@@ -18,7 +18,7 @@ import { doc, collection, getDocs, query, getDoc } from 'firebase/firestore';
 import GlassCard from '@/components/glass-card';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import type { Exam, ExamResult } from '@/lib/types';
+import type { Exam, ExamResult, User as AppUser } from '@/lib/types';
 
 const LoadingAnimation = () => (
     <div className="flex flex-col items-center justify-center min-h-screen">
@@ -57,12 +57,13 @@ export default function ResultsPage() {
   );
   const { data: exam, isLoading: examLoading } = useDoc<Exam>(examRef);
 
+  const nationalId = typeof window !== 'undefined' ? localStorage.getItem('userNationalId') : null;
   const resultRef = useMemoFirebase(
     () =>
-      firestore && user && examId
-        ? doc(firestore, 'users', user.uid, 'examResults', examId)
+      firestore && nationalId && examId
+        ? doc(firestore, 'users', nationalId, 'examResults', examId)
         : null,
-    [firestore, user, examId]
+    [firestore, nationalId, examId]
   );
   const { data: result, isLoading: resultLoading } = useDoc<ExamResult>(resultRef);
   
@@ -72,31 +73,31 @@ export default function ResultsPage() {
 
         setRankLoading(true);
 
-        // This is inefficient but necessary with the current data structure.
-        // A better approach would be a top-level `examResults` collection.
         const usersSnapshot = await getDocs(collection(firestore, 'users'));
         
-        const allResultsForExam: (ExamResult & {userId: string})[] = [];
+        const allResultsForExam: (ExamResult & {nationalId: string})[] = [];
 
         for (const userDoc of usersSnapshot.docs) {
+            if (userDoc.data().role !== 'student') continue;
             const resultDocRef = doc(firestore, 'users', userDoc.id, 'examResults', examId);
             const resultSnap = await getDoc(resultDocRef);
             if (resultSnap.exists()) {
-                allResultsForExam.push({ ...(resultSnap.data() as ExamResult), userId: userDoc.id });
+                allResultsForExam.push({ ...(resultSnap.data() as ExamResult), nationalId: userDoc.id });
             }
         }
         
         allResultsForExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
         
-        const currentUserRank = allResultsForExam.findIndex(r => r.userId === user.uid) + 1;
+        const currentUserRank = allResultsForExam.findIndex(r => r.nationalId === nationalId) + 1;
 
         setTotalParticipants(allResultsForExam.length);
         setRank(currentUserRank > 0 ? currentUserRank : null);
         setRankLoading(false);
     };
-
-    fetchRank();
-  }, [firestore, user, examId]);
+    if (nationalId) {
+        fetchRank();
+    }
+  }, [firestore, user, examId, nationalId]);
 
 
   const isLoading = userLoading || examLoading || resultLoading || rankLoading;

@@ -87,7 +87,7 @@ export default function OverallResultsPage() {
         // 3. Fetch all examResults for all users
         for (const u of usersData) {
           if (u.role === 'student') {
-            const resultsCollectionRef = collection(firestore, `users/${u.id}/examResults`);
+            const resultsCollectionRef = collection(firestore, `users/${u.nationalId}/examResults`);
             const resultsSnapshot = await getDocs(resultsCollectionRef);
             if (!resultsSnapshot.empty) {
                 studentIds.add(u.id);

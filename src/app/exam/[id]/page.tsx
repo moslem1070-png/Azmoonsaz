@@ -106,11 +106,12 @@ export default function ExamPage() {
   };
 
   const finishExam = async () => {
-    if (!exam || !user || !questions || isExamFinished) return;
+    const userNationalId = localStorage.getItem('userNationalId');
+    if (!exam || !user || !userNationalId || !questions || isExamFinished) return;
     setIsExamFinished(true); 
 
     try {
-      await saveExamResult(user.uid, exam, questions, selectedAnswers);
+      await saveExamResult(user.uid, userNationalId, exam, questions, selectedAnswers);
       toast({
         title: 'آزمون به پایان رسید',
         description: 'در حال محاسبه نتایج...',

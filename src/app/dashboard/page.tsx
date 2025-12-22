@@ -47,14 +47,15 @@ export default function DashboardPage() {
   const firestore = useFirestore();
 
   const examsCollection = useMemoFirebase(
-    () => (firestore && user ? collection(firestore, 'exams') : null),
-    [firestore, user]
+    () => (firestore ? collection(firestore, 'exams') : null),
+    [firestore]
   );
   const { data: exams, isLoading: examsLoading } = useCollection<Exam>(examsCollection);
 
+  const nationalId = typeof window !== 'undefined' ? localStorage.getItem('userNationalId') : null;
   const examResultsCollection = useMemoFirebase(
-    () => (firestore && user ? collection(firestore, 'users', user.uid, 'examResults') : null),
-    [firestore, user]
+    () => (firestore && nationalId ? collection(firestore, 'users', nationalId, 'examResults') : null),
+    [firestore, nationalId]
   );
   const { data: examResults, isLoading: resultsLoading } = useCollection<ExamResult>(examResultsCollection);
 

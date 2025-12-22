@@ -29,12 +29,12 @@ type Answers = Record<string, string>; // { questionId: selectedOptionText }
  * @param questions - The array of question objects for the exam.
  * @param userAnswers - A map of question IDs to the selected answer text.
  */
-export const saveExamResult = async (userId: string, exam: Exam, questions: Question[], userAnswers: Answers) => {
+export const saveExamResult = async (userId: string, userNationalId: string, exam: Exam, questions: Question[], userAnswers: Answers) => {
   if (!firestore) {
     throw new Error("Firestore is not initialized.");
   }
-  if (!userId) {
-    throw new Error("User is not authenticated.");
+  if (!userId || !userNationalId) {
+    throw new Error("User is not properly authenticated or identified.");
   }
   if (!questions) {
     throw new Error("Exam object does not contain questions.");
@@ -52,7 +52,7 @@ export const saveExamResult = async (userId: string, exam: Exam, questions: Ques
 
   const resultData: Omit<ExamResult, 'id'> = {
     examId: exam.id,
-    studentId: userId,
+    studentId: userId, // Keep the auth UID for reference
     scorePercentage,
     correctness: correctAnswersCount,
     totalQuestions,
@@ -60,7 +60,7 @@ export const saveExamResult = async (userId: string, exam: Exam, questions: Ques
     userAnswers,
   };
 
-  const resultDocRef = doc(firestore, 'users', userId, 'examResults', exam.id);
+  const resultDocRef = doc(firestore, 'users', userNationalId, 'examResults', exam.id);
   
   return setDoc(resultDocRef, resultData)
     .catch((serverError) => {
@@ -77,22 +77,22 @@ export const saveExamResult = async (userId: string, exam: Exam, questions: Ques
 
 /**
  * Retrieves a specific exam result for a user from Firestore.
- * @param userId - The ID of the user.
+ * @param userNationalId - The national ID of the user (document ID).
  * @param examId - The ID of the exam.
  * @returns The ExamResult object or null if not found.
  */
-export const getExamResult = async (userId: string, examId: string): Promise<ExamResult | null> => {
+export const getExamResult = async (userNationalId: string, examId: string): Promise<ExamResult | null> => {
   if (!firestore) {
     console.error("Firestore is not initialized.");
     return null;
   }
-  if (!userId) {
-     console.error("User is not authenticated.");
+  if (!userNationalId) {
+     console.error("User national ID is not provided.");
      return null;
   }
 
   try {
-    const resultDocRef = doc(firestore, 'users', userId, 'examResults', examId);
+    const resultDocRef = doc(firestore, 'users', userNationalId, 'examResults', examId);
     const docSnap = await getDoc(resultDocRef);
 
     if (docSnap.exists()) {

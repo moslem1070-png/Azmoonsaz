@@ -79,17 +79,18 @@ export default function ExamLeaderboardPage() {
         setExam(examSnap.data() as Exam);
 
         const usersSnapshot = await getDocs(collection(firestore, 'users'));
-        const usersMap = new Map(usersSnapshot.docs.map(d => [d.id, d.data() as AppUser]));
+        const usersMap = new Map(usersSnapshot.docs.map(d => [d.data().id, d.data() as AppUser]));
         
         let allResults: RankedResult[] = [];
-        for (const [userId, userData] of usersMap.entries()) {
+        for (const userDoc of usersSnapshot.docs) {
+          const userData = userDoc.data() as AppUser;
           if (userData.role === 'student') {
-            const resultDocRef = doc(firestore, `users/${userId}/examResults/${examId}`);
+            const resultDocRef = doc(firestore, `users/${userData.nationalId}/examResults/${examId}`);
             const resultSnap = await getDoc(resultDocRef);
             if (resultSnap.exists()) {
               const resultData = resultSnap.data() as ExamResult;
               allResults.push({
-                studentId: userId,
+                studentId: userData.id,
                 studentName: `${userData.firstName} ${userData.lastName}`,
                 score: resultData.scorePercentage,
               });

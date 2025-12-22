@@ -47,9 +47,10 @@ export default function HistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch the user's exam results
+  const nationalId = typeof window !== 'undefined' ? localStorage.getItem('userNationalId') : null;
   const examResultsCollection = useMemoFirebase(
-    () => (firestore && user ? collection(firestore, 'users', user.uid, 'examResults') : null),
-    [firestore, user]
+    () => (firestore && nationalId ? collection(firestore, 'users', nationalId, 'examResults') : null),
+    [firestore, nationalId]
   );
   const { data: examResults, isLoading: resultsLoading } = useCollection<ExamResult>(examResultsCollection);
 

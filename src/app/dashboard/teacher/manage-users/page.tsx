@@ -4,10 +4,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowRight, Trash2, Eye, BrainCircuit } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { collection, deleteDoc, doc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, writeBatch } from 'firebase/firestore';
 
 import Header from '@/components/header';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
 import GlassCard from '@/components/glass-card';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +32,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { User as AppUser } from '@/lib/types';
+import { deleteUser } from 'firebase/auth';
 
 
 type Role = 'student' | 'teacher';
@@ -59,6 +60,7 @@ export default function ManageUsersPage() {
   const router = useRouter();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<Role | null>(null);
 
@@ -79,8 +81,8 @@ export default function ManageUsersPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!firestore || !user || user.uid === userId) {
+  const handleDeleteUser = async (userToDelete: AppUser) => {
+    if (!firestore || !user || user.uid === userToDelete.id) {
         toast({
             variant: 'destructive',
             title: 'خطا',
@@ -90,10 +92,22 @@ export default function ManageUsersPage() {
     }
     
     try {
-        await deleteDoc(doc(firestore, 'users', userId));
+        const batch = writeBatch(firestore);
+        
+        // Delete user document
+        const userDocRef = doc(firestore, 'users', userToDelete.nationalId);
+        batch.delete(userDocRef);
+        
+        // Also delete their exam results
+        const resultsCollectionRef = collection(firestore, 'users', userToDelete.nationalId, 'examResults');
+        // We can't batch-delete a subcollection directly, this needs more complex logic
+        // For now, we'll just delete the user doc. A cloud function would be better for cleanup.
+
+        await batch.commit();
+
         toast({
             title: 'موفق',
-            description: 'کاربر با موفقیت از پایگاه داده حذف شد. برای حذف کامل، او را از بخش Authentication کنسول فایربیس نیز حذف کنید.',
+            description: 'کاربر با موفقیت از پایگاه داده حذف شد. حذف از سیستم احراز هویت در این نسخه پشتیبانی نمی‌شود.',
         });
     } catch(error) {
         console.error('Error deleting user:', error);
@@ -127,10 +141,11 @@ export default function ManageUsersPage() {
     }
   }
 
-  const handleViewUser = (userId: string) => {
+  const handleViewUser = (nationalId: string) => {
+    const currentUserNationalId = localStorage.getItem('userNationalId');
     // Don't navigate if clicking on self
-    if (user && userId === user.uid) return;
-    router.push(`/dashboard/teacher/user-details/${userId}`);
+    if (nationalId === currentUserNationalId) return;
+    router.push(`/dashboard/teacher/user-details/${nationalId}`);
   };
 
 
@@ -174,7 +189,7 @@ export default function ManageUsersPage() {
                   <TableRow>
                     <TableHead className="text-right">نام کامل</TableHead>
                     <TableHead className="text-center">نقش</TableHead>
-                    <TableHead className="text-right hidden sm:table-cell">کد ملی</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">کد ملی / نام کاربری</TableHead>
                     <TableHead className="text-left">عملیات</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -183,7 +198,7 @@ export default function ManageUsersPage() {
                     <TableRow 
                         key={u.id} 
                         className={u.id !== user.uid ? "cursor-pointer hover:bg-white/10" : ""}
-                        onClick={() => handleViewUser(u.id)}
+                        onClick={() => handleViewUser(u.nationalId)}
                     >
                       <TableCell className="font-medium text-right">{`${u.firstName} ${u.lastName}`}</TableCell>
                       <TableCell className="text-center">
@@ -197,7 +212,7 @@ export default function ManageUsersPage() {
                            <div className="flex justify-end font-semibold text-muted-foreground">شما</div>
                         ) : (
                           <div className="flex gap-2 justify-end">
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleViewUser(u.id); }}>
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleViewUser(u.nationalId); }}>
                                 <Eye className="h-4 w-4" />
                                 <span className="sr-only">مشاهده</span>
                             </Button>
@@ -212,12 +227,12 @@ export default function ManageUsersPage() {
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>آیا از حذف این کاربر مطمئن هستید؟</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                        این عمل کاربر را فقط از پایگاه داده حذف می‌کند. برای حذف کامل، باید او را از بخش Authentication کنسول فایربیس نیز حذف کنید.
+                                        این عمل کاربر را از پایگاه داده حذف می‌کند. توجه: این عملیات، کاربر را از سیستم احراز هویت فایربیس (Firebase Authentication) حذف نمی‌کند.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>انصراف</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDeleteUser(u.id)}>
+                                        <AlertDialogAction onClick={() => handleDeleteUser(u)}>
                                         حذف
                                         </AlertDialogAction>
                                     </AlertDialogFooter>
