@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -56,7 +57,6 @@ export default function UserDetailsPage() {
   const { data: userProfile, isLoading: profileLoading } = useDoc<AppUser>(userDocRef);
 
   // Fetch the target user's exam results
-  // Note: This assumes results are still stored under a subcollection of the user document.
   const examResultsCollectionRef = useMemoFirebase(() => (firestore && userProfile ? collection(firestore, `users/${userProfile.nationalId}/examResults`) : null), [firestore, userProfile]);
   const { data: examResults } = useCollection<ExamResult>(examResultsCollectionRef);
 
@@ -77,35 +77,46 @@ export default function UserDetailsPage() {
         }
         setResultsLoading(true);
     
+        // 1. Fetch all exams and all student users once.
+        const examsSnapshot = await getDocs(collection(firestore, 'exams'));
+        const examsMap = new Map(examsSnapshot.docs.map(doc => [doc.id, doc.data() as Exam]));
+
         const usersSnapshot = await getDocs(collection(firestore, 'users'));
-    
-        const promises = examResults.map(async (result) => {
-            const examDocRef = doc(firestore, 'exams', result.examId);
-            const examSnap = await getDoc(examDocRef);
-            const examTitle = examSnap.exists() ? (examSnap.data() as Exam).title : 'آزمون حذف شده';
-    
-            const allResultsForExam: ExamResult[] = [];
-            for (const studentDoc of usersSnapshot.docs) {
-                if (studentDoc.data().role !== 'student') continue;
-                const studentResultRef = doc(firestore, `users/${studentDoc.id}/examResults/${result.examId}`);
-                const studentResultSnap = await getDoc(studentResultRef);
-                if (studentResultSnap.exists()) {
-                    allResultsForExam.push(studentResultSnap.data() as ExamResult);
+        const studentUsers = usersSnapshot.docs
+            .map(doc => doc.data() as AppUser)
+            .filter(u => u.role === 'student');
+        
+        // 2. Fetch all results for all students and group by examId.
+        const allResultsByExam: Record<string, ExamResult[]> = {};
+
+        for (const student of studentUsers) {
+            const studentResultsSnapshot = await getDocs(collection(firestore, `users/${student.nationalId}/examResults`));
+            studentResultsSnapshot.forEach(resultDoc => {
+                const result = resultDoc.data() as ExamResult;
+                if (!allResultsByExam[result.examId]) {
+                    allResultsByExam[result.examId] = [];
                 }
-            }
+                allResultsByExam[result.examId].push(result);
+            });
+        }
+
+        // 3. Process the current user's results to add rank and title.
+        const resultsWithDetails = examResults.map(result => {
+            const examTitle = examsMap.get(result.examId)?.title ?? 'آزمون حذف شده';
+
+            const resultsForThisExam = allResultsByExam[result.examId] || [];
+            resultsForThisExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
             
-            allResultsForExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
-            const currentUserRank = allResultsForExam.findIndex(r => r.studentId === userProfile.id) + 1;
+            const rank = resultsForThisExam.findIndex(r => r.studentId === userProfile.id) + 1;
             
             return {
               ...result,
               examTitle,
-              rank: currentUserRank > 0 ? currentUserRank : undefined,
-              totalParticipants: allResultsForExam.length,
+              rank: rank > 0 ? rank : undefined,
+              totalParticipants: resultsForThisExam.length,
             };
         });
     
-        const resultsWithDetails = await Promise.all(promises);
         setEnrichedResults(resultsWithDetails.sort((a,b) => b.submissionTime.toMillis() - a.submissionTime.toMillis()));
         setResultsLoading(false);
     };
@@ -213,3 +224,4 @@ export default function UserDetailsPage() {
     </div>
   );
 }
+

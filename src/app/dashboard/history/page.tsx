@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,7 +18,7 @@ import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import type { HistoryItem, ExamResult, Exam } from '@/lib/types';
+import type { HistoryItem, ExamResult, Exam, User as AppUser } from '@/lib/types';
 
 const LoadingAnimation = () => (
     <div className="flex flex-col items-center justify-center min-h-screen">
@@ -62,41 +63,72 @@ export default function HistoryPage() {
 
   useEffect(() => {
     const fetchHistoryDetails = async () => {
-      if (!examResults || !firestore) {
+      if (!examResults || !firestore || !user) {
         setIsLoading(resultsLoading);
         return;
       };
 
       setIsLoading(true);
+
+      // 1. Fetch all exams and all student users once.
+      const examsSnapshot = await getDocs(collection(firestore, 'exams'));
+      const examsMap = new Map(examsSnapshot.docs.map(doc => [doc.id, doc.data() as Exam]));
+
+      const usersSnapshot = await getDocs(collection(firestore, 'users'));
+      const studentUsers = usersSnapshot.docs
+        .map(doc => doc.data() as AppUser)
+        .filter(u => u.role === 'student');
       
-      const promises = examResults.map(async (result) => {
-        const examDocRef = doc(firestore, 'exams', result.examId);
-        const examDocSnap = await getDoc(examDocRef);
+      // 2. Fetch all results for all students and group by examId.
+      const allResultsByExam: Record<string, ExamResult[]> = {};
 
-        if (examDocSnap.exists()) {
-          const examData = examDocSnap.data() as Exam;
-          return {
-            id: result.id,
-            examId: result.examId,
-            title: examData.title,
-            date: result.submissionTime?.toDate ? result.submissionTime.toDate().toLocaleDateString('fa-IR') : 'تاریخ نامشخص',
-            score: result.scorePercentage,
-            correctAnswers: result.correctness,
-            totalQuestions: result.totalQuestions || 0,
-          };
-        }
-        return null;
+      for (const student of studentUsers) {
+        const studentResultsSnapshot = await getDocs(collection(firestore, `users/${student.nationalId}/examResults`));
+        studentResultsSnapshot.forEach(resultDoc => {
+          const result = resultDoc.data() as ExamResult;
+          if (!allResultsByExam[result.examId]) {
+            allResultsByExam[result.examId] = [];
+          }
+          allResultsByExam[result.examId].push(result);
+        });
+      }
+
+      // 3. Process the current user's results to add rank and title.
+      const enrichedHistory = examResults.map(result => {
+        const examData = examsMap.get(result.examId);
+        if (!examData) return null; // Exam might have been deleted
+
+        const resultsForThisExam = allResultsByExam[result.examId] || [];
+        resultsForThisExam.sort((a, b) => b.scorePercentage - a.scorePercentage);
+        
+        const rank = resultsForThisExam.findIndex(r => r.studentId === user.uid) + 1;
+
+        return {
+          id: result.id,
+          examId: result.examId,
+          title: examData.title,
+          date: result.submissionTime?.toDate ? result.submissionTime.toDate().toLocaleDateString('fa-IR') : 'تاریخ نامشخص',
+          score: result.scorePercentage,
+          correctAnswers: result.correctness,
+          totalQuestions: result.totalQuestions || 0,
+          rank: rank > 0 ? rank : undefined,
+        };
       });
+      
+      const validItems = enrichedHistory.filter((item): item is HistoryItem => item !== null);
 
-      const items = await Promise.all(promises);
-      const validItems = items.filter((item): item is HistoryItem => item !== null);
+      setHistory(validItems.sort((a, b) => {
+        // Handle potential invalid date strings before creating Date objects
+        const dateA = a.date !== 'تاریخ نامشخص' ? new Date(a.date.replace(/(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3')) : new Date(0);
+        const dateB = b.date !== 'تاریخ نامشخص' ? new Date(b.date.replace(/(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3')) : new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      }));
 
-      setHistory(validItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       setIsLoading(false);
     };
 
     fetchHistoryDetails();
-  }, [examResults, firestore, resultsLoading]);
+  }, [examResults, firestore, resultsLoading, user]);
 
 
   const isLoadingCombined = isUserLoading || isLoading;
@@ -179,3 +211,4 @@ export default function HistoryPage() {
     </div>
   );
 }
+
