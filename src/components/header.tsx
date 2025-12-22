@@ -51,6 +51,7 @@ const Header = ({ children }: { children?: ReactNode }) => {
     try {
       await signOut(auth);
       localStorage.removeItem('userRole');
+      localStorage.removeItem('userNationalId');
       router.push('/');
       toast({
         title: 'خروج موفق',

@@ -84,7 +84,9 @@ export default function ManageUsersPage() {
   const filteredUsers = useMemo(() => {
     if (!users || !user) return [];
     // Filter out the currently logged-in teacher from the list
-    return users.filter(u => u.id !== user.uid);
+    const teacherNationalId = localStorage.getItem('userNationalId');
+    if (!teacherNationalId) return users;
+    return users.filter(u => u.nationalId !== teacherNationalId);
   }, [users, user]);
 
   const handleDeleteUser = async (userToDelete: AppUser) => {
