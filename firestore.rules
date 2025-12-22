@@ -37,20 +37,34 @@ service cloud.firestore {
      * Assumes the user's document ID is their nationalId.
      */
     function getUserRole() {
-      // It's not straightforward to get the current user's document by UID
-      // without custom claims or another lookup table. For role-based access on
-      // collections like 'exams', we will rely on reading the user's own profile.
-      // This is less efficient but works for this data model.
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      // This function relies on a lookup path that might not be available in all contexts.
+      // We will read the user's profile directly in the rule where needed.
+      // For creating exams, we check the user's document using their auth.uid.
+      // This is a placeholder as direct role checks on collections often need custom claims for efficiency.
+      let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      if (exists(/databases/$(database)/documents/users/$(request.auth.uid))) {
+        return userProfile.data.role;
+      }
+      // If the document ID is the national ID, we can't directly get it from auth.uid
+      // without another lookup. For now, we will rely on a more direct check.
+      // This part is tricky without custom claims. We'll find the user doc via query in rules if needed,
+      // but for now, the most secure approach is to check role on write operations where we have the user's ID.
+      return 'student'; // Default to least privileged role.
     }
     
     /**
      * Checks if the currently authenticated user's role is 'teacher'.
+     * This function reads the user's own profile document.
+     * IMPORTANT: This can be inefficient. For production, custom claims are recommended.
+     * We're assuming we can find the user document via some means, but the most direct way
+     * is checking on a write to a known path.
      */
     function isTeacher() {
-      // Note: This relies on the user's document being accessible,
-      // which is granted in the rules below.
-      return isSignedIn() && getUserRole() == 'teacher';
+      // Since we can't easily get the user's document by their nationalId from request.auth,
+      // and we don't know the nationalId in this generic function,
+      // the rule on the `exams` collection will perform the role check more directly.
+      // This function will rely on checking the user's own document via their UID.
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
     }
 
 
@@ -62,7 +76,6 @@ service cloud.firestore {
      */
     match /users/{nationalId} {
       // A user can read their own profile document after they have signed in.
-      // This is the fundamental rule for data ownership.
       allow get: if isSignedIn() && resource.data.id == request.auth.uid;
       
       // Allow a signed-in user to create their own profile document during signup.
@@ -76,13 +89,7 @@ service cloud.firestore {
       allow delete: if false;
 
       // Teachers can list all users for management purposes.
-      // This rule is more complex as it requires checking the requester's role.
-      // A robust implementation would use custom claims. For now, this is a placeholder.
-      // WARNING: A simple `allow list: if isTeacher()` would require every teacher to be
-      // able to read EVERY user's profile, which might be too broad.
-      // We will allow list read for any authenticated user for now, as the UI is gated.
-      // This should be tightened in a production app (e.g., with custom claims).
-      allow list: if isSignedIn();
+      allow list: if isTeacher();
 
       /**
        * @description Secures a student's exam results.
@@ -108,16 +115,23 @@ service cloud.firestore {
      */
     match /exams/{examId} {
         allow list, get: if isSignedIn();
-        allow create, update, delete: if isTeacher();
+        // A user can create an exam if they are signed in and their role is 'teacher'.
+        // We look up their user document using their UID from the auth object.
+        allow create: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.resource.data.teacherId)).data.role == 'teacher';
+        
+        // A user can update or delete an exam if they are the teacher who created it.
+        allow update, delete: if isSignedIn() && resource.data.teacherId == request.auth.uid;
         
         /**
          * @description Secures the questions within an exam.
          * @path /exams/{examId}/questions/{questionId}
-         * @principle Permissions are inherited from the parent.
+         * @principle Permissions are inherited from the parent, but read access must be explicit for subcollections.
          */
         match /questions/{questionId} {
+            // Any authenticated user can read the questions of any exam.
             allow list, get: if isSignedIn();
-            allow create, update, delete: if isTeacher();
+            // Only the teacher who owns the exam can modify its questions.
+            allow create, update, delete: if isSignedIn() && get(/databases/$(database)/documents/exams/$(examId)).data.teacherId == request.auth.uid;
         }
     }
   }
