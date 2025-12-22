@@ -43,6 +43,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { generateExamQuestions } from '@/ai/flows/generate-exam-questions';
 import type { Exam, Question } from '@/lib/types';
+import { findRelevantImage } from '@/ai/flows/find-relevant-image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 const questionSchema = z.object({
@@ -220,6 +222,31 @@ export default function EditExamPage() {
     }
   };
 
+  const getRelevantCoverImage = async (topic: string): Promise<string> => {
+    const examCovers = PlaceHolderImages.filter(img => img.id.startsWith('exam-cover'));
+    const fallbackImage = examCovers[0]?.imageUrl || 'https://picsum.photos/seed/1/600/400';
+
+    if (examCovers.length === 0) {
+        return fallbackImage;
+    }
+
+    try {
+      const availableHints = examCovers.map(img => img.imageHint);
+      const result = await findRelevantImage({ topic, availableHints });
+      
+      const bestHint = result.bestHint;
+      const bestImage = examCovers.find(img => img.imageHint === bestHint);
+      
+      return bestImage?.imageUrl || fallbackImage;
+
+    } catch (error) {
+      console.error("AI image selection failed, returning random image.", error);
+      // Fallback to random selection if AI fails
+      const randomIndex = Math.floor(Math.random() * examCovers.length);
+      return examCovers[randomIndex].imageUrl;
+    }
+  };
+
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     if (!user || !firestore || !examId) {
       toast({
@@ -232,6 +259,7 @@ export default function EditExamPage() {
     setIsSubmitting(true);
     
     try {
+      const finalCoverImageUrl = await getRelevantCoverImage(data.title);
       const batch = writeBatch(firestore);
       
       const examDocRef = doc(firestore, 'exams', examId);
@@ -240,6 +268,7 @@ export default function EditExamPage() {
         description: data.description,
         difficulty: data.difficulty,
         timer: data.timer,
+        coverImageURL: finalCoverImageUrl,
         updatedAt: serverTimestamp(),
       });
 
