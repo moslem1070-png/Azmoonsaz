@@ -11,9 +11,9 @@ import {
   Code,
   Clapperboard,
   Users,
-  Sprout,
   Atom,
   type LucideIcon,
+  BookOpen,
 } from 'lucide-react';
 
 export const examCategories: Record<
@@ -32,6 +32,6 @@ export const examCategories: Record<
   Sports: { label: 'ورزش', icon: Dumbbell },
   Programming: { label: 'برنامه نویسی', icon: Code },
   Cinema: { label: 'سینما', icon: Clapperboard },
-  Religion: { label: 'دینی', icon: Sprout },
+  Religion: { label: 'دینی', icon: BookOpen },
   Family: { label: 'خانواده', icon: Users },
 };
