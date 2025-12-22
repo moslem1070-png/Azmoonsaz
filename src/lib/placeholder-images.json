@@ -25,6 +25,54 @@
       "imageHint": "mathematics numbers"
     },
     {
+      "id": "exam-cover-5",
+      "description": "Cover for a literature quiz.",
+      "imageUrl": "https://plus.unsplash.com/premium_photo-1661759609204-9e32a67e235a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxsaXRlcmF0dXJlJTIwcG9ldHJ5fGVufDB8fHx8MTc2NjE0ODAwNXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "literature poetry"
+    },
+    {
+      "id": "exam-cover-6",
+      "description": "Cover for a geography quiz.",
+      "imageUrl": "https://images.unsplash.com/photo-1613511853384-69975775c754?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxnZW9ncmFwaHklMjB3b3JsZCUyMG1hcHxlbnwwfHx8fDE3NjYxNDgwODJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "geography map"
+    },
+    {
+      "id": "exam-cover-7",
+      "description": "Cover for an art quiz.",
+      "imageUrl": "https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxhcnQlMjBwYWludGluZ3xlbnwwfHx8fDE3NjYxNDgxNDR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "art painting"
+    },
+    {
+      "id": "exam-cover-8",
+      "description": "Cover for a music quiz.",
+      "imageUrl": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtdXNpYyUyMGNvbmNlcnR8ZW58MHx8fHwxNzY2MTQ4MTc3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "music concert"
+    },
+    {
+      "id": "exam-cover-9",
+      "description": "Cover for a sports quiz.",
+      "imageUrl": "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzcG9ydHMlMjBmaXRuZXNzfGVufDB8fHx8MTc2NjE0ODIyNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sports fitness"
+    },
+    {
+      "id": "exam-cover-10",
+      "description": "Cover for a computer science or programming quiz.",
+      "imageUrl": "https://images.unsplash.com/photo-1542831371-29b0f74f9713?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjb2RpbmclMjBwcm9ncmFtbWluZ3xlbnwwfHx8fDE3NjYxNDgyNzF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "coding programming"
+    },
+    {
+      "id": "exam-cover-11",
+      "description": "Cover for a cinema or movies quiz.",
+      "imageUrl": "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjaW5lbWElMjBtb3ZpZXxlbnwwfHx8fDE3NjYxNDgzMTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cinema movie"
+    },
+    {
+      "id": "exam-cover-12",
+      "description": "A fallback abstract image.",
+      "imageUrl": "https://images.unsplash.com/photo-1533134486753-c833f0ed4866?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMHBhdHRlcm58ZW58MHx8fHwxNzY2MTQ4MzQwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract pattern"
+    },
+    {
       "id": "question-image-1",
       "description": "Image for a geography question about mountains.",
       "imageUrl": "https://images.unsplash.com/photo-1612441804231-77a36b284856?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxtb3VudGFpbiUyMGxhbmRzY2FwZXxlbnwwfHx8fDE3NjYwNTQzNjN8MA&ixlib=rb-4.1.0&q=80&w=1080",
