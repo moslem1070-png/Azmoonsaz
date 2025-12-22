@@ -43,6 +43,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
 import { generateExamQuestions } from '@/ai/flows/generate-exam-questions';
 import { findRelevantImage } from '@/ai/flows/find-relevant-image';
+import { translateTopicToEnglish } from '@/ai/flows/translate-topic-english';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const questionSchema = z.object({
@@ -169,7 +170,7 @@ export default function CreateExamPage() {
     }
   };
   
-  const getRelevantCoverImage = async (topic: string): Promise<string> => {
+  const getRelevantCoverImage = async (farsiTopic: string): Promise<string> => {
     const examCovers = PlaceHolderImages.filter(img => img.id.startsWith('exam-cover'));
     const fallbackImage = examCovers[0]?.imageUrl || 'https://picsum.photos/seed/1/600/400';
 
@@ -178,10 +179,13 @@ export default function CreateExamPage() {
     }
 
     try {
-      const availableHints = examCovers.map(img => img.imageHint);
-      const result = await findRelevantImage({ topic, availableHints });
+      // 1. Translate the topic to English
+      const { translatedTopic } = await translateTopicToEnglish({ topic: farsiTopic });
       
-      const bestHint = result.bestHint;
+      // 2. Find the best hint using the English topic
+      const availableHints = examCovers.map(img => img.imageHint);
+      const { bestHint } = await findRelevantImage({ topic: translatedTopic, availableHints });
+      
       const bestImage = examCovers.find(img => img.imageHint === bestHint);
       
       return bestImage?.imageUrl || fallbackImage;
