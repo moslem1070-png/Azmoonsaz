@@ -7,7 +7,7 @@
  * - Access control prioritizes path-based ownership and role-based checks where appropriate.
  *
  * Data Structure:
- * - /users/{nationalId}: Private user profile. The document ID is the user's national code.
+ * - /users/{nationalId}: Private user profile. The document ID is the user's national code (کد ملی).
  * - /exams/{examId}: Publicly readable list of exams. Only teachers/admins can write.
  * - /exams/{examId}/questions/{questionId}: Questions inherit permissions from the parent exam.
  * - /users/{nationalId}/examResults/{examResultId}: Private exam results.
@@ -55,7 +55,7 @@ service cloud.firestore {
 
 
     /**
-     * @description Secures a user's profile document. The document ID is the nationalId.
+     * @description Secures a user's profile document. The document ID is the nationalId (کد ملی).
      * @path /users/{nationalId}
      * @principle A user can create their own profile. Only they can read/update their own data.
      *            Teachers/managers can list users.

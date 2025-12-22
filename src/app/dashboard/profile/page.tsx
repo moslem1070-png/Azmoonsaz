@@ -167,7 +167,7 @@ export default function ProfilePage() {
         }
         
         if ((didNationalIdChange || didPasswordChange) && !data.oldPassword) {
-            toast({ variant: 'destructive', title: 'خطا', description: 'برای تغییر کد ملی یا رمز عبور، باید رمز عبور فعلی را وارد کنید.' });
+            toast({ variant: 'destructive', title: 'خطا', description: 'برای تغییر کد ملی، باید رمز عبور فعلی را وارد کنید.' });
             setLoading(false);
             return;
         }
@@ -316,7 +316,7 @@ export default function ProfilePage() {
                                 name="nationalId"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>{role === 'student' ? 'کد ملی' : 'نام کاربری'}</FormLabel>
+                                        <FormLabel>کد ملی</FormLabel>
                                         <div className="relative">
                                             <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                             <FormControl>
@@ -399,5 +399,6 @@ export default function ProfilePage() {
 
 
     
+
 
 

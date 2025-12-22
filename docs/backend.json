@@ -16,7 +16,7 @@
         },
         "nationalId": {
           "type": "string",
-          "description": "The user's national ID (for students) or username (for teachers)."
+          "description": "The user's national ID (کد ملی)."
         },
         "firstName": {
           "type": "string",

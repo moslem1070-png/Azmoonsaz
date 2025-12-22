@@ -44,7 +44,7 @@ const createEmail = (username: string, role: Role) => {
 const formSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
-  nationalId: z.string().min(1, { message: 'کد ملی یا نام کاربری الزامی است.'}),
+  nationalId: z.string().min(1, { message: 'کد ملی الزامی است.'}),
   password: z.string().min(1, { message: 'رمز عبور الزامی است.'}),
   confirmPassword: z.string(),
 });
@@ -195,7 +195,7 @@ export default function LoginPage() {
             const docSnap = await getDoc(userDocRef);
 
             if (docSnap.exists()) {
-                toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: 'این کد ملی یا نام کاربری قبلا ثبت شده است.' });
+                toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: 'این کد ملی قبلا ثبت شده است.' });
                 setLoading(false);
                 return;
             }
@@ -227,7 +227,7 @@ export default function LoginPage() {
         } catch(error: any) {
             console.error("Signup error:", error);
             const errorMessage =
-                error.code === 'auth/email-already-in-use' ? 'این کد ملی یا نام کاربری قبلا در سیستم احراز هویت ثبت شده است.' :
+                error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلا در سیستم احراز هویت ثبت شده است.' :
                 'خطایی در هنگام پردازش درخواست شما رخ داد.';
             toast({ variant: 'destructive', title: 'خطا در ثبت‌نام', description: errorMessage });
         } finally {
@@ -383,13 +383,13 @@ export default function LoginPage() {
                   name="nationalId"
                   render={({ field }) => (
                     <FormItem>
-                       <FormLabel className="sr-only">{selectedRole === 'student' ? 'کد ملی' : 'نام کاربری'}</FormLabel>
+                       <FormLabel className="sr-only">کد ملی</FormLabel>
                         <div className="relative">
                             <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
                             <FormControl>
                                 <Input 
                                 type="text" 
-                                placeholder={selectedRole === 'student' ? 'کد ملی' : 'نام کاربری'}
+                                placeholder="کد ملی"
                                 className="pl-10 text-right"
                                 maxLength={selectedRole === 'student' ? 10 : undefined}
                                 {...field}
