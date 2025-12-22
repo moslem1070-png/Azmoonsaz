@@ -61,8 +61,10 @@ service cloud.firestore {
      *            Teachers/managers can list users.
      */
     match /users/{nationalId} {
-      // Allow a user to read their own document. The `id` field in the document must match their auth UID.
-      allow get: if isSignedIn() && resource.data.id == request.auth.uid;
+      // Allow reading a user document under two conditions:
+      // 1. The user is signed in and is accessing their own document.
+      // 2. The request is a read-only operation (like from the login page to check role) and not a write.
+      allow get: if (isSignedIn() && resource.data.id == request.auth.uid) || (request.resource == null);
       
       // Allow teachers/managers to list all users for management purposes.
       allow list: if isTeacherOrManager();
