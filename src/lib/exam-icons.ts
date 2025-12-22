@@ -22,7 +22,7 @@ export const examCategories: Record<
 > = {
   General: { label: 'عمومی', icon: Book },
   Science: { label: 'علوم', icon: FlaskConical },
-  History: { label: 'تاریخ', icon: Landmark },
+  History: { label: 'تاریخ', icon: Feather },
   Math: { label: 'ریاضی', icon: Pi },
   Physics: { label: 'فیزیک', icon: Atom },
   Literature: { label: 'ادبیات', icon: Feather },
@@ -32,6 +32,6 @@ export const examCategories: Record<
   Sports: { label: 'ورزش', icon: Dumbbell },
   Programming: { label: 'برنامه نویسی', icon: Code },
   Cinema: { label: 'سینما', icon: Clapperboard },
-  Religion: { label: 'دینی', icon: BookOpen },
+  Religion: { label: 'دینی', icon: Landmark },
   Family: { label: 'خانواده', icon: Users },
 };
