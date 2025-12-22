@@ -5,18 +5,6 @@
  * - User data is private and owned by the user.
  * - Public data (like exams) is readable by any authenticated user but writable only by authorized roles.
  * - Access control prioritizes path-based ownership and role-based checks where appropriate.
- *
- * Data Structure:
- * - /users/{nationalId}: Private user profile. The document ID is the user's national code (کد ملی).
- * - /exams/{examId}: Publicly readable list of exams. Only teachers/admins can write.
- * - /exams/{examId}/questions/{questionId}: Questions inherit permissions from the parent exam.
- * - /users/{nationalId}/examResults/{examResultId}: Private exam results.
- *
- * Key Security Decisions:
- * - Default Deny: All paths are closed by default. Access is only granted explicitly.
- * - Public Reads for Exams: Any signed-in user can list and read exams, allowing students to browse them.
- * - Role-Based Writes for Exams: Only users with the 'teacher' or 'manager' role can create, update, or delete exams. This is checked by reading the user's profile.
- * - Strict Ownership for User Data: All data under `/users/{userId}` is strictly private.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -30,60 +18,29 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
-
-    /**
-     * Retrieves the role of the user making the request.
-     * This requires reading the user's own profile document.
-     * Assumes the user's document ID is their nationalId.
-     */
-    function getUserRole() {
-      // This function relies on a lookup path that might not be available in all contexts.
-      // We will read the user's profile directly in the rule where needed.
-      // For creating exams, we check the user's document using their auth.uid.
-      // This is a placeholder as direct role checks on collections often need custom claims for efficiency.
-      let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      if (exists(/databases/$(database)/documents/users/$(request.auth.uid))) {
-        return userProfile.data.role;
-      }
-      // If the document ID is the national ID, we can't directly get it from auth.uid
-      // without another lookup. For now, we will rely on a more direct check.
-      // This part is tricky without custom claims. We'll find the user doc via query in rules if needed,
-      // but for now, the most secure approach is to check role on write operations where we have the user's ID.
-      return 'student'; // Default to least privileged role.
-    }
     
     /**
      * Checks if the currently authenticated user's role is 'teacher'.
      * This function reads the user's own profile document.
-     * IMPORTANT: This can be inefficient. For production, custom claims are recommended.
-     * We're assuming we can find the user document via some means, but the most direct way
-     * is checking on a write to a known path.
      */
     function isTeacher() {
-      // Since we can't easily get the user's document by their nationalId from request.auth,
-      // and we don't know the nationalId in this generic function,
-      // the rule on the `exams` collection will perform the role check more directly.
-      // This function will rely on checking the user's own document via their UID.
+      // It is assumed the user's document exists and the UID matches the document ID
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
     }
 
 
     /**
-     * @description Secures a user's profile document. The document ID is the nationalId (کد ملی).
-     * @path /users/{nationalId}
+     * @description Secures a user's profile document.
+     * @path /users/{userId}
      * @principle A user can create their own profile. Only they can read/update their own data.
-     *            Teachers/managers can list users.
      */
-    match /users/{nationalId} {
-      // A user can read their own profile document after they have signed in.
-      allow get: if isSignedIn() && resource.data.id == request.auth.uid;
+    match /users/{userId} {
+      // A user can read/update their own profile document.
+      allow read, update: if isSignedIn() && request.auth.uid == userId;
       
       // Allow a signed-in user to create their own profile document during signup.
-      // The `id` field in the document MUST match the UID of the user creating it.
-      allow create: if isSignedIn() && request.resource.data.id == request.auth.uid;
-      
-      // A user can update their own profile.
-      allow update: if isSignedIn() && resource.data.id == request.auth.uid;
+      // The document ID MUST match the UID of the user creating it.
+      allow create: if isSignedIn() && request.auth.uid == userId;
       
       // Nobody is allowed to delete a user document directly through the client.
       allow delete: if false;
@@ -93,12 +50,12 @@ service cloud.firestore {
 
       /**
        * @description Secures a student's exam results.
-       * @path /users/{nationalId}/examResults/{examResultId}
+       * @path /users/{userId}/examResults/{examResultId}
        * @principle A user can only access their own results. A teacher can read results.
        */
       match /examResults/{examResultId} {
         // The user can get/list their own results OR a teacher can access them.
-        allow get, list: if (isSignedIn() && get(/databases/$(database)/documents/users/$(nationalId)).data.id == request.auth.uid) || isTeacher();
+        allow get, list: if (isSignedIn() && request.auth.uid == userId) || isTeacher();
         // A user can create their own exam results.
         allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
         // No one can update or delete results from the client.
@@ -107,31 +64,25 @@ service cloud.firestore {
     }
     
     /**
-     * @description Secures the top-level exams collection.
+     * @description Secures the top-level exams collection and their questions.
      * @path /exams/{examId}
-     * @allow (list, get) Any authenticated user can read the list of exams and individual exams.
-     * @allow (create, update, delete) Only users with a 'teacher' role can modify exams.
      * @principle Public read access for discoverability, role-restricted write access for control.
      */
     match /exams/{examId} {
-        allow list, get: if isSignedIn();
-        // A user can create an exam if they are signed in and their role is 'teacher'.
-        // We look up their user document using their UID from the auth object.
-        allow create: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.resource.data.teacherId)).data.role == 'teacher';
+        // Any authenticated user (student or teacher) can read exams and their questions.
+        allow read: if isSignedIn();
+        
+        // A user can create an exam if they are a signed-in teacher.
+        allow create: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher' && request.resource.data.teacherId == request.auth.uid;
         
         // A user can update or delete an exam if they are the teacher who created it.
         allow update, delete: if isSignedIn() && resource.data.teacherId == request.auth.uid;
         
-        /**
-         * @description Secures the questions within an exam.
-         * @path /exams/{examId}/questions/{questionId}
-         * @principle Permissions are inherited from the parent, but read access must be explicit for subcollections.
-         */
+        // This rule allows any authenticated user to also read the questions subcollection.
         match /questions/{questionId} {
-            // Any authenticated user can read the questions of any exam.
-            allow list, get: if isSignedIn();
-            // Only the teacher who owns the exam can modify its questions.
-            allow create, update, delete: if isSignedIn() && get(/databases/$(database)/documents/exams/$(examId)).data.teacherId == request.auth.uid;
+            allow read: if isSignedIn();
+             // Only the teacher who owns the exam can modify its questions.
+            allow write: if isSignedIn() && get(/databases/$(database)/documents/exams/$(examId)).data.teacherId == request.auth.uid;
         }
     }
   }
