@@ -2,7 +2,7 @@ import {
   Book,
   FlaskConical,
   Landmark,
-  Calculator,
+  Sigma,
   Feather,
   Globe,
   Palette,
@@ -12,6 +12,7 @@ import {
   Clapperboard,
   Users,
   Sprout,
+  Atom,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -22,7 +23,8 @@ export const examCategories: Record<
   General: { label: 'عمومی', icon: Book },
   Science: { label: 'علوم', icon: FlaskConical },
   History: { label: 'تاریخ', icon: Landmark },
-  Math: { label: 'ریاضی', icon: Calculator },
+  Math: { label: 'ریاضی', icon: Sigma },
+  Physics: { label: 'فیزیک', icon: Atom },
   Literature: { label: 'ادبیات', icon: Feather },
   Geography: { label: 'جغرافیا', icon: Globe },
   Art: { label: 'هنر', icon: Palette },
