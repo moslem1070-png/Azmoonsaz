@@ -195,11 +195,7 @@ export default function ManageUsersPage() {
                     <TableRow 
                         key={u.id} 
                         className={u.id === user.uid ? "" : "cursor-pointer hover:bg-white/10"}
-                        onClick={() => {
-                          if (u.id !== user.uid) {
-                            handleViewUser(u.nationalId);
-                          }
-                        }}
+                        onClick={u.id === user.uid ? undefined : () => handleViewUser(u.nationalId)}
                     >
                       <TableCell className="font-medium text-right">{`${u.firstName} ${u.lastName}`}</TableCell>
                       <TableCell className="text-center">
@@ -210,7 +206,7 @@ export default function ManageUsersPage() {
                       <TableCell className="text-right hidden sm:table-cell text-muted-foreground">{u.nationalId}</TableCell>
                       <TableCell className="text-left">
                         {u.id === user.uid ? (
-                           <div className="flex justify-end font-semibold text-muted-foreground">شما</div>
+                           <div className="flex justify-end font-semibold text-muted-foreground pr-2">شما</div>
                         ) : (
                           <div className="flex gap-2 justify-end">
                             <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleViewUser(u.nationalId); }}>
