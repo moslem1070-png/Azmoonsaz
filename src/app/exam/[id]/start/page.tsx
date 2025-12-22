@@ -1,7 +1,6 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { Clock, FileQuestion, Users, X, Check, Award, Medal, BrainCircuit } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
@@ -13,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import type { Exam, User as AppUser, ExamResult } from '@/lib/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import ExamCoverVector from '@/components/exam-cover-vector';
 
 
 interface LeaderboardEntry {
@@ -158,14 +158,8 @@ export default function ExamStartPage() {
   return (
     <div className="flex items-center justify-center min-h-screen p-4 bg-gradient-to-br from-[#302851] to-[#1A162E]">
       <GlassCard className="w-full max-w-2xl overflow-hidden">
-        <div className="relative h-48 sm:h-60 w-full">
-          <Image
-            src={exam.coverImageURL || 'https://picsum.photos/seed/1/600/400'}
-            alt={exam.title}
-            fill
-            className="object-cover"
-            data-ai-hint="quiz education"
-          />
+        <div className="relative h-48 sm:h-60 w-full bg-black/20 flex items-center justify-center">
+          <ExamCoverVector category={exam.category} className="w-28 h-28" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
           <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-white">{exam.title}</h1>

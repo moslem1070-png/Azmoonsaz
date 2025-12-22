@@ -6,7 +6,6 @@ import { useRouter, useParams } from 'next/navigation';
 import { useFieldArray, useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import Image from 'next/image';
 import {
   ArrowRight,
   Save,
@@ -45,7 +44,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { generateExamQuestions } from '@/ai/flows/generate-exam-questions';
 import type { Exam, Question } from '@/lib/types';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { examCategories } from '@/lib/exam-icons';
+import ExamCoverVector from '@/components/exam-cover-vector';
 
 
 const questionSchema = z.object({
@@ -64,8 +64,8 @@ const formSchema = z.object({
   difficulty: z.enum(['Easy', 'Medium', 'Hard'], {
     required_error: 'انتخاب سطح دشواری الزامی است.',
   }),
+  category: z.string({ required_error: 'انتخاب دسته بندی الزامی است.' }),
   timer: z.coerce.number().min(1, 'زمان آزمون باید حداقل ۱ دقیقه باشد.'),
-  coverImageURL: z.string({ required_error: 'انتخاب عکس جلد الزامی است.' }).url('آدرس عکس معتبر نیست.'),
   questions: z.array(questionSchema).min(1, 'حداقل یک سوال باید اضافه شود.'),
 });
 
@@ -106,20 +106,19 @@ export default function EditExamPage() {
   const [originalQuestions, setOriginalQuestions] = useState<Question[]>([]);
   const [numAiQuestions, setNumAiQuestions] = useState(5);
   
-  const examCovers = PlaceHolderImages.filter(img => img.id.startsWith('exam-cover'));
-
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: '',
       description: '',
       difficulty: 'Medium',
+      category: 'General',
       timer: 10,
       questions: [],
     },
   });
   
-  const watchedCoverImageURL = form.watch('coverImageURL');
+  const watchedCategory = form.watch('category');
 
   const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
@@ -161,7 +160,7 @@ export default function EditExamPage() {
           description: examData.description,
           difficulty: examData.difficulty,
           timer: examData.timer,
-          coverImageURL: examData.coverImageURL,
+          category: examData.category,
           questions: questionsData.map(q => ({
             id: q.id,
             text: q.text,
@@ -249,7 +248,7 @@ export default function EditExamPage() {
         description: data.description,
         difficulty: data.difficulty,
         timer: data.timer,
-        coverImageURL: data.coverImageURL,
+        category: data.category,
         updatedAt: serverTimestamp(),
       });
 
@@ -350,22 +349,26 @@ export default function EditExamPage() {
                   </FormItem>
                 )} />
                 
-                 <FormField control={form.control} name="coverImageURL" render={({ field }) => (
+                 <FormField control={form.control} name="category" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>عکس جلد آزمون</FormLabel>
+                    <FormLabel>دسته بندی</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} dir="rtl">
-                      <FormControl><SelectTrigger><SelectValue placeholder="یک عکس جلد برای آزمون انتخاب کنید" /></SelectTrigger></FormControl>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="یک دسته بندی برای آزمون انتخاب کنید" />
+                        </SelectTrigger>
+                      </FormControl>
                       <SelectContent>
-                        {examCovers.map((image) => (
-                           <SelectItem key={image.id} value={image.imageUrl}>{image.description}</SelectItem>
+                        {Object.entries(examCategories).map(([key, value]) => (
+                            <SelectItem key={key} value={key}>{value.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
-                    {watchedCoverImageURL && (
-                      <div className="mt-4 relative h-32 w-full rounded-lg overflow-hidden">
-                        <Image src={watchedCoverImageURL} alt="پیش‌نمایش عکس جلد" fill className="object-cover" />
-                      </div>
+                    {watchedCategory && (
+                        <div className="mt-4 p-4 flex items-center justify-center bg-white/5 rounded-lg h-32">
+                           <ExamCoverVector category={watchedCategory} className="w-20 h-20" />
+                        </div>
                     )}
                   </FormItem>
                 )} />

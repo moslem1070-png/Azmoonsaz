@@ -1,11 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Clock, FileQuestion, CheckCircle, Trophy, BrainCircuit } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,8 +11,9 @@ import Header from '@/components/header';
 import GlassCard from '@/components/glass-card';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import type { Exam, ExamResult } from '@/lib/types';
+import ExamCoverVector from '@/components/exam-cover-vector';
 
 type Role = 'student' | 'teacher' | 'manager';
 
@@ -108,14 +107,8 @@ export default function DashboardPage() {
 
                 return (
                   <GlassCard key={exam.id} className="flex flex-col overflow-hidden transition-transform duration-300 hover:-translate-y-2">
-                    <div className="relative h-48 w-full">
-                      <Image
-                        src={exam.coverImageURL || 'https://picsum.photos/seed/1/600/400'}
-                        alt={exam.title}
-                        fill
-                        className="object-cover"
-                        data-ai-hint="quiz education"
-                      />
+                    <div className="relative h-48 w-full bg-black/20 flex items-center justify-center">
+                       <ExamCoverVector category={exam.category} className="w-24 h-24" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                       <Badge
                         variant={exam.difficulty === 'Easy' ? 'secondary' : exam.difficulty === 'Medium' ? 'default' : 'destructive'}
