@@ -298,7 +298,7 @@ export default function CreateExamPage() {
                         <FormMessage />
                          {watchedCategory && (
                             <div className="mt-4 p-4 flex items-center justify-center bg-white/5 rounded-lg h-32">
-                                <ExamCoverVector category={watchedCategory} className="w-20 h-20" />
+                               <ExamCoverVector category={watchedCategory} className="w-20 h-20 text-accent" />
                             </div>
                         )}
                     </FormItem>

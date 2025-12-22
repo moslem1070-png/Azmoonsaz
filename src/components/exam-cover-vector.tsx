@@ -15,7 +15,7 @@ const ExamCoverVector = ({ category, className }: ExamCoverVectorProps) => {
   return (
     <div
       className={cn(
-        'flex items-center justify-center text-white/80',
+        'flex items-center justify-center text-accent',
         className
       )}
     >
