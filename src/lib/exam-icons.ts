@@ -19,7 +19,7 @@ export const examCategories: Record<
   string,
   { label: string; icon: LucideIcon }
 > = {
-  Knowledge: { label: 'دانش عمومی', icon: Book },
+  General: { label: 'عمومی', icon: Book },
   Science: { label: 'علوم', icon: FlaskConical },
   History: { label: 'تاریخ', icon: Landmark },
   Math: { label: 'ریاضی', icon: Calculator },
@@ -32,5 +32,4 @@ export const examCategories: Record<
   Cinema: { label: 'سینما', icon: Clapperboard },
   Religion: { label: 'دینی', icon: Sprout },
   Family: { label: 'خانواده', icon: Users },
-  General: { label: 'عمومی', icon: Book },
 };
