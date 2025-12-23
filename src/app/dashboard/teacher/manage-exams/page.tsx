@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowRight, Edit, Trash2, FilePlus, Eye, BrainCircuit } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { collection, deleteDoc, doc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs } from 'firebase/firestore';
 
 import Header from '@/components/header';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -35,6 +36,8 @@ import type { Exam } from '@/lib/types';
 
 
 type Role = 'student' | 'teacher' | 'manager';
+
+type ExamWithCount = Exam & { questionCount: number };
 
 const LoadingAnimation = () => (
     <div className="flex flex-col items-center justify-center min-h-screen">
@@ -67,6 +70,8 @@ export default function ManageExamsPage() {
     [firestore, user]
   );
   const { data: exams, isLoading: examsLoading } = useCollection<Exam>(examsCollection);
+  const [examsWithCounts, setExamsWithCounts] = useState<ExamWithCount[]>([]);
+  const [countsLoading, setCountsLoading] = useState(true);
   
   const difficultyMap = {
     'Easy': 'آسان',
@@ -81,6 +86,35 @@ export default function ManageExamsPage() {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
+
+  useEffect(() => {
+    const fetchQuestionCounts = async () => {
+      if (!firestore || !exams || examsLoading) {
+          if (!examsLoading) setCountsLoading(false);
+          return;
+      }
+      
+      setCountsLoading(true);
+      try {
+        const examsWithQuestionCounts = await Promise.all(
+          exams.map(async (exam) => {
+            const questionsCollectionRef = collection(firestore, 'exams', exam.id, 'questions');
+            const questionsSnapshot = await getDocs(questionsCollectionRef);
+            return { ...exam, questionCount: questionsSnapshot.size };
+          })
+        );
+        setExamsWithCounts(examsWithQuestionCounts);
+      } catch (error) {
+        console.error("Error fetching question counts:", error);
+        // Even if counts fail, show the exams
+        setExamsWithCounts(exams.map(e => ({ ...e, questionCount: 0 })));
+      } finally {
+        setCountsLoading(false);
+      }
+    };
+
+    fetchQuestionCounts();
+  }, [exams, firestore, examsLoading]);
 
   const handleDeleteExam = async (examId: string) => {
     if (!firestore) return;
@@ -100,7 +134,7 @@ export default function ManageExamsPage() {
     }
   };
 
-  const isLoading = isUserLoading || examsLoading;
+  const isLoading = isUserLoading || examsLoading || countsLoading;
 
   if (isLoading || !user || userRole === 'student') {
     return <LoadingAnimation />;
@@ -125,7 +159,7 @@ export default function ManageExamsPage() {
         </div>
 
         <GlassCard className="p-4 sm:p-6">
-          {exams && exams.length > 0 ? (
+          {examsWithCounts && examsWithCounts.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -138,7 +172,7 @@ export default function ManageExamsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {exams.map((exam: Exam) => (
+                  {examsWithCounts.map((exam: ExamWithCount) => (
                     <TableRow key={exam.id}>
                       <TableCell className="font-medium text-right">{exam.title}</TableCell>
                       <TableCell className="text-center">
@@ -146,7 +180,7 @@ export default function ManageExamsPage() {
                           {difficultyMap[exam.difficulty] || exam.difficulty}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center hidden sm:table-cell">{exam.questions?.length || 0}</TableCell>
+                      <TableCell className="text-center hidden sm:table-cell">{exam.questionCount}</TableCell>
                       <TableCell className="text-center hidden sm:table-cell">{exam.timer}</TableCell>
                       <TableCell className="text-left">
                         <div className="flex gap-2 justify-end">
@@ -196,3 +230,5 @@ export default function ManageExamsPage() {
     </div>
   );
 }
+
+    
