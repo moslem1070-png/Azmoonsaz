@@ -227,12 +227,12 @@ export default function ManageUsersPage() {
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>آیا از حذف این کاربر مطمئن هستید؟</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                  این عمل فقط پروفایل کاربر (نام، نتایج آزمون‌ها و...) را از پایگاه داده حذف می‌کند. حساب کاربری او در سیستم احراز هویت (Authentication) باقی می‌ماند. برای حذف کامل کاربر، باید از کنسول فایربیس اقدام کنید.
+                                                  این عمل پروفایل کاربر (شامل نام، نتایج آزمون‌ها و...) را از پایگاه داده حذف می‌کند، اما حساب کاربری او برای ورود به سیستم (Authentication) باقی می‌ماند. حذف کامل کاربر از سیستم در حال حاضر پشتیبانی نمی‌شود.
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>انصراف</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeleteUser(u)}>
+                                                <AlertDialogAction onClick={(e) => {e.stopPropagation(); handleDeleteUser(u)}}>
                                                   حذف پروفایل
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
