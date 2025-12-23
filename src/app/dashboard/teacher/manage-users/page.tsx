@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -104,14 +105,14 @@ export default function ManageUsersPage() {
 
         toast({
             title: 'موفق',
-            description: 'کاربر با موفقیت از پایگاه داده حذف شد. حذف از سیستم احراز هویت در این نسخه پشتیبانی نمی‌شود.',
+            description: 'پروفایل کاربر با موفقیت از پایگاه داده حذف شد.',
         });
     } catch(error) {
         console.error('Error deleting user:', error);
         toast({
             variant: 'destructive',
             title: 'خطا در حذف کاربر',
-            description: 'مشکلی در حذف کاربر از پایگاه داده رخ داد.',
+            description: 'مشکلی در حذف پروفایل کاربر از پایگاه داده رخ داد.',
         });
     }
   };
@@ -226,13 +227,13 @@ export default function ManageUsersPage() {
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>آیا از حذف این کاربر مطمئن هستید؟</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                این عمل کاربر را از پایگاه داده حذف می‌کند. توجه: این عملیات، کاربر را از سیستم احراز هویت فایربیس (Firebase Authentication) حذف نمی‌کند.
+                                                  این عمل فقط پروفایل کاربر (نام، نتایج آزمون‌ها و...) را از پایگاه داده حذف می‌کند. حساب کاربری او در سیستم احراز هویت (Authentication) باقی می‌ماند. برای حذف کامل کاربر، باید از کنسول فایربیس اقدام کنید.
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>انصراف</AlertDialogCancel>
                                                 <AlertDialogAction onClick={() => handleDeleteUser(u)}>
-                                                حذف
+                                                  حذف پروفایل
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
