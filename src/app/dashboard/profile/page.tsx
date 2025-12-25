@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Key, User, Fingerprint, Lock, BrainCircuit } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, updateEmail } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile } from 'firebase/auth';
 import { doc, getDoc, updateDoc, writeBatch } from 'firebase/firestore';
 
 
@@ -21,13 +21,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useAuth } from '@/firebase';
 import type { User as AppUser } from '@/lib/types';
 
-
-// Helper to get role from email
-const getRoleFromEmail = (email?: string | null): string => {
-    if (!email) return 'student';
-    if (email.startsWith('teacher-')) return 'teacher';
-    return 'student';
-}
 
 // Helper function to create a fake email from national ID
 const createEmail = (username: string, role: string) => {
@@ -216,9 +209,7 @@ export default function ProfilePage() {
                 batch.set(newDocRef, newDocumentData);
                 batch.delete(oldDocRef);
                 
-                // Also update the email in auth and display name
-                const newEmail = createEmail(data.nationalId, userProfile.role);
-                await updateEmail(user, newEmail);
+                // Update display name in auth
                 await updateProfile(user, { displayName: fullName });
                 
                 await batch.commit();
@@ -403,5 +394,7 @@ export default function ProfilePage() {
 
 
 
+
+    
 
     
