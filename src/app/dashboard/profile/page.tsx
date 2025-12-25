@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -159,15 +160,16 @@ export default function ProfilePage() {
         const didPasswordChange = !!data.newPassword;
         const didNameChange = data.firstName !== userProfile.firstName || data.lastName !== userProfile.lastName;
         const fullName = `${data.firstName} ${data.lastName}`;
+        const hasAnyChange = didNationalIdChange || didPasswordChange || didNameChange;
 
-        if (!didNationalIdChange && !didPasswordChange && !didNameChange) {
+        if (!hasAnyChange) {
             toast({ title: 'توجه', description: 'هیچ تغییری برای ذخیره وجود ندارد.' });
             setLoading(false);
             return;
         }
-        
-        if ((didNationalIdChange || didPasswordChange) && !data.oldPassword) {
-            toast({ variant: 'destructive', title: 'خطا', description: 'برای تغییر کد ملی، باید رمز عبور فعلی را وارد کنید.' });
+
+        if (!data.oldPassword) {
+            toast({ variant: 'destructive', title: 'خطا', description: 'برای ذخیره هرگونه تغییر، باید رمز عبور فعلی را وارد کنید.' });
             setLoading(false);
             return;
         }
@@ -180,18 +182,15 @@ export default function ProfilePage() {
 
 
         try {
-            // Re-authenticate if necessary for critical changes
-            if ((didNationalIdChange || didPasswordChange) && data.oldPassword) {
-                const credential = EmailAuthProvider.credential(user.email, data.oldPassword);
-                await reauthenticateWithCredential(user, credential);
-            }
+            // Re-authenticate for all critical changes
+            const credential = EmailAuthProvider.credential(user.email, data.oldPassword);
+            await reauthenticateWithCredential(user, credential);
 
             let successMessages = [];
 
             // Update Auth displayName if changed
-            if (didNameChange) {
+            if (didNameChange && !didNationalIdChange) { // Only update if name changed but ID didn't (ID change handles this)
                 await updateProfile(user, { displayName: fullName });
-                successMessages.push('نام شما با موفقیت به‌روزرسانی شد.');
             }
 
             if (didNationalIdChange) {
@@ -217,9 +216,10 @@ export default function ProfilePage() {
                 batch.set(newDocRef, newDocumentData);
                 batch.delete(oldDocRef);
                 
-                // Also update the email in auth
+                // Also update the email in auth and display name
                 const newEmail = createEmail(data.nationalId, userProfile.role);
                 await updateEmail(user, newEmail);
+                await updateProfile(user, { displayName: fullName });
                 
                 await batch.commit();
 
@@ -228,7 +228,7 @@ export default function ProfilePage() {
                 successMessages.push('اطلاعات شما با موفقیت به‌روزرسانی شد.');
 
             } else if (didNameChange) {
-                // If only name changed, just update the existing document
+                // If only name changed (and ID did not), just update the existing document
                 const userDocRef = doc(firestore, 'users', userProfile.nationalId);
                 await updateDoc(userDocRef, {
                     firstName: data.firstName,
@@ -402,3 +402,6 @@ export default function ProfilePage() {
 
 
 
+
+
+    
