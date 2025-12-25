@@ -100,12 +100,8 @@ export default function ProfilePage() {
         }
         if (user && firestore && !userProfile) {
             const fetchUserProfile = async () => {
-                // Since doc ID is nationalId, we can't use user.uid to fetch the doc directly.
-                // We must get the nationalId from localStorage or another source.
                 const storedNationalId = localStorage.getItem('userNationalId');
                 if (!storedNationalId) {
-                    // This can happen if user logs in but hasn't stored their ID yet, or old session.
-                    // We can't fetch the profile, maybe force logout or show error.
                     console.error("National ID not found in local storage.");
                     toast({variant: 'destructive', title: 'خطا', description: 'اطلاعات پروفایل یافت نشد، لطفا مجدد وارد شوید.'})
                     return;
@@ -128,7 +124,7 @@ export default function ProfilePage() {
 
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema),
-        values: { // Changed from defaultValues to values
+        values: { 
             firstName: userProfile?.firstName || '',
             lastName: userProfile?.lastName || '',
             nationalId: userProfile?.nationalId || '',
@@ -136,8 +132,6 @@ export default function ProfilePage() {
             newPassword: '',
             confirmPassword: '',
         },
-        // We need to re-enable revalidation so `values` is updated
-        // when userProfile state changes after the async fetch.
         reValidateMode: 'onChange',
     });
 
@@ -148,12 +142,10 @@ export default function ProfilePage() {
             setLoading(false);
             return;
         }
-
-        const didNationalIdChange = data.nationalId !== userProfile.nationalId;
+        
         const didPasswordChange = !!data.newPassword;
         const didNameChange = data.firstName !== userProfile.firstName || data.lastName !== userProfile.lastName;
-        const fullName = `${data.firstName} ${data.lastName}`;
-        const hasAnyChange = didNationalIdChange || didPasswordChange || didNameChange;
+        const hasAnyChange = didPasswordChange || didNameChange;
 
         if (!hasAnyChange) {
             toast({ title: 'توجه', description: 'هیچ تغییری برای ذخیره وجود ندارد.' });
@@ -166,13 +158,6 @@ export default function ProfilePage() {
             setLoading(false);
             return;
         }
-        
-        if (role === 'student' && !/^\d{10}$/.test(data.nationalId)) {
-            toast({ variant: 'destructive', title: 'خطا', description: 'کد ملی دانش‌آموز باید ۱۰ رقم و فقط شامل عدد باشد.' });
-            setLoading(false);
-            return;
-        }
-
 
         try {
             // Re-authenticate for all critical changes
@@ -181,45 +166,11 @@ export default function ProfilePage() {
 
             let successMessages = [];
 
-            // Update Auth displayName if changed
-            if (didNameChange && !didNationalIdChange) { // Only update if name changed but ID didn't (ID change handles this)
-                await updateProfile(user, { displayName: fullName });
-            }
-
-            if (didNationalIdChange) {
-                const newDocRef = doc(firestore, 'users', data.nationalId);
-                const oldDocRef = doc(firestore, 'users', userProfile.nationalId);
-
-                // Check if the new national ID is already taken
-                const newDocSnap = await getDoc(newDocRef);
-                if (newDocSnap.exists()) {
-                    throw new Error('کد ملی جدید قبلاً استفاده شده است.');
-                }
-
-                // Use a batch write to move the document
-                const batch = writeBatch(firestore);
-                
-                const newDocumentData = {
-                    ...userProfile,
-                    firstName: data.firstName,
-                    lastName: data.lastName,
-                    nationalId: data.nationalId,
-                };
-                
-                batch.set(newDocRef, newDocumentData);
-                batch.delete(oldDocRef);
-                
-                // Update display name in auth
+            // Update user's name if changed
+            if (didNameChange) {
+                const fullName = `${data.firstName} ${data.lastName}`;
                 await updateProfile(user, { displayName: fullName });
                 
-                await batch.commit();
-
-                // Update local storage
-                localStorage.setItem('userNationalId', data.nationalId);
-                successMessages.push('اطلاعات شما با موفقیت به‌روزرسانی شد.');
-
-            } else if (didNameChange) {
-                // If only name changed (and ID did not), just update the existing document
                 const userDocRef = doc(firestore, 'users', userProfile.nationalId);
                 await updateDoc(userDocRef, {
                     firstName: data.firstName,
@@ -236,7 +187,6 @@ export default function ProfilePage() {
 
             toast({ title: 'موفق', description: successMessages.join(' ') || 'اطلاعات با موفقیت به‌روزرسانی شد.' });
             
-            // Manually update profile state to reflect changes immediately
             setUserProfile(prev => prev ? ({ ...prev, ...data }) : null);
 
             form.reset({ ...form.getValues(), oldPassword: '', newPassword: '', confirmPassword: '' });
@@ -246,7 +196,6 @@ export default function ProfilePage() {
             const errorMessage = 
                 error.code === 'auth/wrong-password' ? 'رمز عبور فعلی اشتباه است.' :
                 error.code === 'auth/weak-password' ? 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد.' :
-                error.code === 'auth/email-already-in-use' ? 'این کد ملی قبلاً استفاده شده است.' :
                 error.code === 'auth/requires-recent-login' ? 'برای این عملیات نیاز به ورود مجدد است. لطفاً رمز عبور فعلی را وارد کنید.' :
                 error.message || 'خطایی در به‌روزرسانی اطلاعات رخ داد.';
             toast({ variant: 'destructive', title: 'خطا', description: errorMessage });
@@ -307,11 +256,11 @@ export default function ProfilePage() {
                                 name="nationalId"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>کد ملی</FormLabel>
+                                        <FormLabel>کد ملی (غیرقابل تغییر)</FormLabel>
                                         <div className="relative">
                                             <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                             <FormControl>
-                                                <Input {...field} className="pl-10 text-right" maxLength={role === 'student' ? 10 : undefined}/>
+                                                <Input {...field} className="pl-10 text-right" disabled />
                                             </FormControl>
                                         </div>
                                         <FormMessage />
@@ -394,6 +343,8 @@ export default function ProfilePage() {
 
 
 
+
+    
 
     
 
