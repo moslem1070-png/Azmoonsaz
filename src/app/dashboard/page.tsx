@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -41,8 +42,26 @@ export default function DashboardPage() {
   const [completedExamIds, setCompletedExamIds] = useState<Set<string>>(new Set());
   const { user, isUserLoading } = useUser();
   const [userRole, setUserRole] = useState<Role | null>(null);
+  const [nationalId, setNationalId] = useState<string | null>(null);
 
   const firestore = useFirestore();
+
+  // This effect runs once on the client to get the role and nationalId
+  useEffect(() => {
+    const role = localStorage.getItem('userRole') as Role;
+    const id = localStorage.getItem('userNationalId');
+    setUserRole(role);
+    setNationalId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/');
+    } else if (!isUserLoading && user && (userRole === 'teacher' || userRole === 'manager')) {
+      router.push('/dashboard/teacher');
+    }
+  }, [user, isUserLoading, router, userRole]);
+
 
   const examsCollection = useMemoFirebase(
     () => (firestore ? collection(firestore, 'exams') : null),
@@ -50,23 +69,13 @@ export default function DashboardPage() {
   );
   const { data: exams, isLoading: examsLoading } = useCollection<Exam>(examsCollection);
 
-  const nationalId = typeof window !== 'undefined' ? localStorage.getItem('userNationalId') : null;
+  // The query for examResults now explicitly depends on the nationalId state.
+  // It will be null until nationalId is set from localStorage.
   const examResultsCollection = useMemoFirebase(
     () => (firestore && nationalId ? collection(firestore, 'users', nationalId, 'examResults') : null),
     [firestore, nationalId]
   );
   const { data: examResults, isLoading: resultsLoading } = useCollection<ExamResult>(examResultsCollection);
-
-  useEffect(() => {
-    const role = localStorage.getItem('userRole') as Role;
-    setUserRole(role);
-
-    if (!isUserLoading && !user) {
-      router.push('/');
-    } else if (!isUserLoading && user && (role === 'teacher' || role === 'manager')) {
-      router.push('/dashboard/teacher');
-    }
-  }, [user, isUserLoading, router]);
 
   useEffect(() => {
     if (examResults) {
@@ -82,12 +91,14 @@ export default function DashboardPage() {
     }
   };
 
-  const isLoading = isUserLoading || examsLoading || resultsLoading;
-
+  // isLoading is now true until the user is loaded AND the nationalId has been read from storage.
+  // This prevents rendering before the results query can be correctly constructed.
+  const isLoading = isUserLoading || examsLoading || !nationalId || resultsLoading;
+  
   if (isLoading || !user || userRole === 'teacher' || userRole === 'manager') {
     return <LoadingAnimation />;
   }
-
+  
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
