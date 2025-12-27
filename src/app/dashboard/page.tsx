@@ -69,13 +69,11 @@ export default function DashboardPage() {
   );
   const { data: exams, isLoading: examsLoading } = useCollection<Exam>(examsCollection);
 
-  // The query for examResults now explicitly depends on the nationalId state.
-  // It will be null until nationalId is set from localStorage.
   const examResultsCollection = useMemoFirebase(
     () => (firestore && nationalId ? collection(firestore, 'users', nationalId, 'examResults') : null),
     [firestore, nationalId]
   );
-  const { data: examResults, isLoading: resultsLoading } = useCollection<ExamResult>(examResultsCollection);
+  const { data: examResults } = useCollection<ExamResult>(examResultsCollection);
 
   useEffect(() => {
     if (examResults) {
@@ -91,9 +89,7 @@ export default function DashboardPage() {
     }
   };
 
-  // isLoading is now true until the user is loaded AND the nationalId has been read from storage.
-  // This prevents rendering before the results query can be correctly constructed.
-  const isLoading = isUserLoading || examsLoading || !nationalId || resultsLoading;
+  const isLoading = isUserLoading || examsLoading;
   
   if (isLoading || !user || userRole === 'teacher' || userRole === 'manager') {
     return <LoadingAnimation />;
